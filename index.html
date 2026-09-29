@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aloca WEB // External Project</title>
+  <style>
+    :root {
+      --bg-main: #09090b;
+      --bg-surface: #14141b;
+      --border: #27273a;
+      --accent: #00ff66;
+      --error: #ff3333;
+      --text: #f4f4f5;
+      --text-muted: #71717a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text); padding: 2rem; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); margin-bottom: 2rem; }
+    .logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    
+    select, input, button { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; outline: none; font-weight: 600; }
+    button { cursor: pointer; background: var(--accent); color: #000; border: none; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; }
+    nav { display: flex; flex-direction: column; gap: 0.5rem; }
+    .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; }
+    .nav-link.active, .nav-link:hover { background: var(--bg-surface); border-color: var(--border); color: var(--text); border-left: 4px solid var(--accent); }
+
+    main { background: var(--bg-surface); border: 1px solid var(--border); padding: 2rem; min-height: 60vh; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+    th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+    
+    .console { background: #000; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #a3e635; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; }
+    .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; }
+    .dropzone:hover { border-color: var(--accent); color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">ALOCA<span>.WEB</span> <small style="font-size:0.8rem; color:var(--text-muted)">// EXT-SPA</small></div>
+    <div>
+      <select id="ufSelector" onchange="conectarNodoRegional()">
+        <option value="">Selecione a UF...</option>
+        <option value="SP">São Paulo (SP)</option>
+        <option value="RJ">Rio de Janeiro (RJ)</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav>
+      <button class="nav-link active" onclick="navegar('catalogo')">// VER CATALOGO</button>
+      <button class="nav-link" onclick="navegar('upload')">// SUBIR CSV (LOTE)</button>
+    </nav>
+
+    <main>
+      <!-- Tela: Catálogo -->
+      <div id="view-catalogo" class="view active">
+        <h2>Catálogo de Itens em Tempo Real</h2>
+        <table>
+          <thead>
+            <tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Físico</th><th>Reservado</th><th>Disponível</th></tr>
+          </thead>
+          <tbody id="lista-produtos">
+            <tr><td colspan="6" style="color:var(--text-muted)">Aguardando conexão com o nó regional da UF...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tela: Upload CSV -->
+      <div id="view-upload" class="view">
+        <h2>Importação de Lote Técnico (CSV)</h2>
+        <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+          Clique para carregar ou solte o arquivo .CSV aqui
+          <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="lerArquivoCSV(this)">
+        </div>
+        <div id="consoleOut" class="console" style="display:none"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Centralização de Endpoints das suas macros do Apps Script por UF
+    const EndpointsUFs = {
+      SP: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec",
+      RJ: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec"
+    };
+
+    const AppState = {
+      uf: "",
+      apiUrl: "",
+      usuario: "operador.teste@aloca.com",
+      segmento: "uniforme" // Segmento vinculado ao perfil do usuário
+    };
+
+    function navegar(id) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+      document.getElementById(`view-${id}`).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function conectarNodoRegional() {
+      AppState.uf = document.getElementById("ufSelector").value;
+      AppState.apiUrl = EndpointsUFs[AppState.uf] || "";
+      
+      const tabela = document.getElementById("lista-produtos");
+      if(!AppState.apiUrl) {
+        tabela.innerHTML = `<tr><td colspan="6" style="color:var(--text-muted)">Nenhuma UF selecionada.</td></tr>`;
+        return;
+      }
+
+      tabela.innerHTML = `<tr><td colspan="6" style="color:var(--accent)">Buscando dados via API Gateway do Google...</td></tr>`;
+
+      try {
+        const resposta = await fetch(AppState.apiUrl, {
+          method: "POST",
+          body: JSON.stringify({ acao: "BUSCAR_CATALOGO", segmento: AppState.segmento })
+        });
+        const dadosHttp = await resposta.json();
+
+        if(dadosHttp.sucesso) {
+          if(dadosHttp.dados.length === 0) {
+            tabela.innerHTML = `<tr><td colspan="6">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
+            return;
+          }
+          tabela.innerHTML = dadosHttp.dados.map(p => `
+            <tr>
+              <td><strong>${p.sku}</strong></td>
+              <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
+              <td>${p.categoria}</td>
+              <td>${p.saldo_fisico}</td>
+              <td>${p.saldo_reservado}</td>
+              <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
+            </tr>
+          `).join('');
+        } else {
+          tabela.innerHTML = `<tr><td colspan="6" style="color:var(--error)">Erro no servidor: ${dadosHttp.mensagem}</td></tr>`;
+        }
+      } catch (err) {
+        tabela.innerHTML = `<tr><td colspan="6" style="color:var(--error)">Falha na requisição de rede HTTP. Verifique o CORS ou a URL de Deploy.</td></tr>`;
+      }
+    }
+
+    function lerArquivoCSV(input) {
+      const consoleOut = document.getElementById("consoleOut");
+      consoleOut.style.display = "block";
+      consoleOut.innerHTML = `> Arquivo interceptado: ${input.files[0].name}\n`;
+
+      if(!AppState.apiUrl) {
+        consoleOut.innerHTML += `[ERRO CRÍTICO] Selecione a UF no cabeçalho antes de rodar o lote.`;
+        return;
+      }
+
+      const leitor = new FileReader();
+      leitor.onload = async function(e) {
+        const linhas = e.target.result.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        let itens = [];
+
+        for(let i = 1; i < linhas.length; i++) {
+          const cols = linhas[i].split(",");
+          if(cols[0] && cols[1]) {
+            itens.push({ sku: cols[0].toUpperCase().trim(), quantidade: parseInt(cols[1]) });
+          }
+        }
+
+        consoleOut.innerHTML += `> Enviando de forma atômica para a API da UF [${AppState.uf}]...\n`;
+        
+        try {
+          const resposta = await fetch(AppState.apiUrl, {
+            method: "POST",
+            body: JSON.stringify({ acao: "CRIAR_PEDIDO", usuario: AppState.usuario, itens: itens })
+          });
+          const resJson = await resposta.json();
+
+          if(resJson.sucesso) {
+            consoleOut.innerHTML += `\n[SUCESSO] ${resJson.mensagem}`;
+            conectarNodoRegional();
+          } else {
+            consoleOut.innerHTML += `\n[LOTE REJEITADO PELO BANCO]\n${resJson.mensagem}\n`;
+            if(resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
+          }
+        } catch (err) {
+          consoleOut.innerHTML += `\n[ERRO DE CONEXÃO] Sem resposta da API.`;
+        }
+      };
+      leitor.readAsText(input.files[0]);
+    }
+  </script>
+</body>
+</html>
