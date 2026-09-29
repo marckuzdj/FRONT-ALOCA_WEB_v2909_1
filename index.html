@@ -151,50 +151,69 @@
       }
     }
 
-    function lerArquivoCSV(input) {
-      const consoleOut = document.getElementById("consoleOut");
-      consoleOut.style.display = "block";
-      consoleOut.innerHTML = `> Arquivo interceptado: ${input.files[0].name}\n`;
+function lerArquivoCSV(input) {
+  const consoleOut = document.getElementById("consoleOut");
+  consoleOut.style.display = "block";
+  consoleOut.innerHTML = `> Arquivo interceptado: ${input.files[0].name}\n`;
 
-      if(!AppState.apiUrl) {
-        consoleOut.innerHTML += `[ERRO CRÍTICO] Selecione a UF no cabeçalho antes de rodar o lote.`;
-        return;
+  if (!AppState.apiUrl) {
+    consoleOut.innerHTML += `[ERRO CRÍTICO] Selecione a UF no cabeçalho antes de rodar o lote.`;
+    return;
+  }
+
+  const leitor = new FileReader();
+  leitor.onload = async function(e) {
+    const linhas = e.target.result.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    let itens = [];
+    let errosSintaxe = [];
+
+    // Ignora o cabeçalho (i = 0) e percorre as linhas de dados
+    for (let i = 1; i < linhas.length; i++) {
+      const cols = linhas[i].split(",");
+      
+      // Validação básica se a linha possui pelo menos duas colunas preenchidas
+      if (cols.length >= 2) {
+        const skuLimpo = cols[0].trim().toUpperCase();
+        const qtdLimpa = parseInt(cols[1].trim(), 10);
+
+        if (!skuLimpo || isNaN(qtdLimpa)) {
+          errosSintaxe.push(`Linha ${i + 1}: SKU inválido ou Quantidade não numérica.`);
+          continue;
+        }
+
+        itens.push({ sku: skuLimpo, quantidade: qtdLimpa });
       }
-
-      const leitor = new FileReader();
-      leitor.onload = async function(e) {
-        const linhas = e.target.result.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-        let itens = [];
-
-        for(let i = 1; i < linhas.length; i++) {
-          const cols = linhas[i].split(",");
-          if(cols[0] && cols[1]) {
-            itens.push({ sku: cols[0].toUpperCase().trim(), quantidade: parseInt(cols[1]) });
-          }
-        }
-
-        consoleOut.innerHTML += `> Enviando de forma atômica para a API da UF [${AppState.uf}]...\n`;
-        
-        try {
-          const resposta = await fetch(AppState.apiUrl, {
-            method: "POST",
-            body: JSON.stringify({ acao: "CRIAR_PEDIDO", usuario: AppState.usuario, itens: itens })
-          });
-          const resJson = await resposta.json();
-
-          if(resJson.sucesso) {
-            consoleOut.innerHTML += `\n[SUCESSO] ${resJson.mensagem}`;
-            conectarNodoRegional();
-          } else {
-            consoleOut.innerHTML += `\n[LOTE REJEITADO PELO BANCO]\n${resJson.mensagem}\n`;
-            if(resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
-          }
-        } catch (err) {
-          consoleOut.innerHTML += `\n[ERRO DE CONEXÃO] Sem resposta da API.`;
-        }
-      };
-      leitor.readAsText(input.files[0]);
     }
+
+    if (errosSintaxe.length > 0) {
+      consoleOut.innerHTML += `\n[ERRO DE ARQUIVO] Linhas malformadas detectadas:\n` + errosSintaxe.join("\n");
+      return;
+    }
+
+    consoleOut.innerHTML += `> Enviando lote de ${itens.length} itens de forma atômica para a API da UF [${AppState.uf}]...\n`;
+    
+    try {
+      const resposta = await fetch(AppState.apiUrl, {
+        method: "POST",
+        body: JSON.stringify({ acao: "CRIAR_PEDIDO", usuario: AppState.usuario, itens: itens })
+      });
+      const resJson = await resposta.json();
+
+      if (resJson.sucesso) {
+        consoleOut.innerHTML += `\n<span style="color: var(--accent);">[SUCESSO] ${resJson.mensagem}</span>`;
+        conectarNodoRegional(); // Atualiza a tabela do catálogo na tela
+      } else {
+        consoleOut.innerHTML += `\n<span style="color: var(--error);">[LOTE REJEITADO PELO BANCO]</span>\n${resJson.mensagem}\n`;
+        if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
+      }
+    } catch (err) {
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE CONEXÃO] Sem resposta da API. Verifique o console do desenvolvedor (F12).</span>`;
+    }
+  };
+  
+  leitor.readAsText(input.files[0]);
+}
+
   </script>
 </body>
 </html>
