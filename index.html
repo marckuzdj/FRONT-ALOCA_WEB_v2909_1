@@ -63,6 +63,7 @@
     <nav>
       <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
       <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
+      <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
     </nav>
 
     <main>
@@ -117,6 +118,32 @@
   </table>
 </div>
 
+<!-- Tela: Despacho e Faturamento RPA (Módulo 3) -->
+<div id="view-faturamentoRPA" class="view">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+      <h2>Painel de Expedição e Faturamento (RPA)</h2>
+      <p style="color: var(--text-muted);">Confirmação de saída física, anexação de rastreio e extração de dados para o robô fiscal.</p>
+    </div>
+  </div>
+
+  <table style="margin-bottom: 2rem;">
+    <thead>
+      <tr>
+        <th>ID Pedido</th>
+        <th>Solicitante</th>
+        <th>Status Atual</th>
+        <th>Código de Rastreio / Nota</th>
+        <th>Ação de Fechamento</th>
+      </tr>
+    </thead>
+    <tbody id="fila-expedicao-corpo">
+      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Aguardando sincronização de dados regionais...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+  
 <script>
   // Centralização de Endpoints das suas macros do Apps Script por UF
   const EndpointsUFs = {
@@ -151,6 +178,15 @@
     if (elementoClicado) {
       elementoClicado.classList.add('active');
     }
+   
+    // Adicione esta verificação no final da sua função navegar(id, elementoClicado) existente:
+    if (id === 'faturamentoRPA') {
+      carregarFilaExpedicao();
+    }
+    
+    if (id === 'operacaoLogistica') {
+      buscarPedidosHoje();
+    }    
   }
 
   /**
@@ -378,6 +414,82 @@ async function dispararOndaPicking(idPedido) {
     }
   } catch (err) {
     alert("Erro de comunicação ao processar transição de status.");
+  }
+}
+
+  /**
+ * MÓDULO 3: Ações de Liquidação de Lote e Fechamento Contábil
+ */
+
+// 1. Monitora e renderiza os pedidos que entraram em processo de separação física
+async function carregarFilaExpedicao() {
+  const corpoExpedicao = document.getElementById("fila-expedicao-corpo");
+  if (!AppState.apiUrl) return;
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_EM_SEPARACAO" })
+    });
+    const dadosHttp = await resposta.json();
+
+    if (dadosHttp.sucesso) {
+      if (dadosHttp.dados.length === 0) {
+        corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Nenhum lote pendente de expedição no momento.</td></tr>`;
+        return;
+      }
+
+      corpoExpedicao.innerHTML = dadosHttp.dados.map(p => `
+        <tr>
+          <td><strong>${p.id_pedido}</strong></td>
+          <td>${p.usuario_solicitante}</td>
+          <td><span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${p.status}</span></td>
+          <td>
+            <input type="text" id="rastreio_${p.id_pedido}" placeholder="Cód. Rastreio ou Remessa" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+          </td>
+          <td>
+            <button onclick="finalizarLoteContabil('${p.id_pedido}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background:#111827; color:#fff;">Despachar Lote</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.error("Falha ao puxar fila de faturamento.", err);
+  }
+}
+
+// 2. Invoca a lógica de persistência "All-or-Nothing" para liquidar as cotas no Sheets
+async function finalizarLoteContabil(idPedido) {
+  const inputRastreio = document.getElementById(`rastreio_${idPedido}`);
+  const codigoRastreio = inputRastreio ? inputRastreio.value.trim() : "";
+
+  if (!codigoRastreio) {
+    alert("ERRO DE COMPLIANCE: É obrigatório informar o código de rastreamento ou nota de remessa para despachar o lote.");
+    return;
+  }
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      body: JSON.stringify({
+        acao: "MUDAR_STATUS_OPERADOR",
+        subAcao: "CONFIRMAR_EXPEDICAO",
+        idPedido: idPedido,
+        rastreio: codigoRastreio,
+        usuario: AppState.usuario
+      })
+    });
+    const resultado = await resposta.json();
+
+    if (resultado.sucesso) {
+      alert(`[EXPEDIDO] ${resultado.mensagem}`);
+      carregarFilaExpedicao(); // Recarrega o painel instantaneamente
+      if (typeof conectarNodoRegional === "function") conectarNodoRegional(); // Atualiza estoque na home
+    } else {
+      alert(`[ERRO] ${resultado.mensagem}`);
+    }
+  } catch (err) {
+    alert("Erro crítico de rede ao processar fechamento de lote contábil.");
   }
 }
 
