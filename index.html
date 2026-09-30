@@ -125,11 +125,12 @@
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
     <div>
       <h2>Painel de Expedição e Faturamento (RPA)</h2>
-      <p style="color: var(--text-muted);">Confirmação de saída física, anexação de rastreio e extração de dados para o robô fiscal.</p>
+      <p style="color: var(--text-muted);">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
     </div>
+    <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
   </div>
 
-  <table style="margin-bottom: 2rem;">
+  <table>
     <thead>
       <tr>
         <th>ID Pedido</th>
@@ -140,10 +141,11 @@
       </tr>
     </thead>
     <tbody id="fila-expedicao-corpo">
-      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Aguardando sincronização de dados regionais...</td></tr>
+      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
     </tbody>
   </table>
 </div>
+
 
   
 <script>
@@ -551,56 +553,76 @@ function resetarBotaoEstadoOriginal(btn) {
  * MÓDULO 3: Ações de Liquidação de Lote e Fechamento Contábil
  */
 
-// 1. Monitora e renderiza os pedidos que entraram em processo de separação física
+/**
+ * MÓDULO 3: Consultas de Expedição e Fechamento Contábil
+ */
+
+// 1. Puxa os lotes retidos em processo de separação física (Filtro Diário Otimizado)
 async function carregarFilaExpedicao() {
   const corpoExpedicao = document.getElementById("fila-expedicao-corpo");
-  if (!AppState.apiUrl) return;
+  if (!AppState.apiUrl) {
+    corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Selecione uma UF ativa no cabeçalho.</td></tr>`;
+    return;
+  }
+
+  corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--accent)">Sincronizando lotes em ondas de picking...</td></tr>`;
 
   try {
     const resposta = await fetch(AppState.apiUrl, {
       method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_EM_SEPARACAO" })
     });
     const dadosHttp = await resposta.json();
 
     if (dadosHttp.sucesso) {
       if (dadosHttp.dados.length === 0) {
-        corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Nenhum lote pendente de expedição no momento.</td></tr>`;
+        corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Nenhum pedido retido em fase de separação nesta UF hoje.</td></tr>`;
         return;
       }
 
       corpoExpedicao.innerHTML = dadosHttp.dados.map(p => `
         <tr>
-          <td><strong>${p.id_pedido}</strong></td>
-          <td>${p.usuario_solicitante}</td>
-          <td><span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">${p.status}</span></td>
+          <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
+          <td>${p.usuario || "Regional"}</td>
+          <td><span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
           <td>
-            <input type="text" id="rastreio_${p.id_pedido}" placeholder="Cód. Rastreio ou Remessa" style="padding: 0.4rem; font-size: 0.85rem; width: 100%;">
+            <input type="text" id="rastreio_${p.id_pedido}" placeholder="Cód. Rastreio ou Remessa" style="padding: 0.4rem; font-size: 0.85rem; width: 100%; border: 1px solid var(--border); outline: none;">
           </td>
           <td>
-            <button onclick="finalizarLoteContabil('${p.id_pedido}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background:#111827; color:#fff;">Despachar Lote</button>
+            <button onclick="finalizarLoteContabil('${p.id_pedido}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background:#111827; color:#fff;">Despachar Lote</button>
           </td>
         </tr>
       `).join('');
+    } else {
+      corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Erro do Servidor: ${dadosHttp.mensagem}</td></tr>`;
     }
   } catch (err) {
-    console.error("Falha ao puxar fila de faturamento.", err);
+    corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Falha crítica de comunicação com o nó regional de despacho.</td></tr>`;
   }
 }
 
-// 2. Invoca a lógica de persistência "All-or-Nothing" para liquidar as cotas no Sheets
-async function finalizarLoteContabil(idPedido) {
+// 2. Dispara a baixa definitiva do estoque físico real e remove a cota reservada
+async function finalizarLoteContabil(idPedido, botao) {
   const inputRastreio = document.getElementById(`rastreio_${idPedido}`);
   const codigoRastreio = inputRastreio ? inputRastreio.value.trim() : "";
 
   if (!codigoRastreio) {
-    alert("ERRO DE COMPLIANCE: É obrigatório informar o código de rastreamento ou nota de remessa para despachar o lote.");
+    alert("ERRO DE COMPLIANCE: Informe obrigatoriamente o código de rastreamento ou nota para liberar o lote.");
     return;
   }
+
+  botao.disabled = true;
+  botao.innerHTML = "⏳ Atualizando Saldos...";
 
   try {
     const resposta = await fetch(AppState.apiUrl, {
       method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         acao: "MUDAR_STATUS_OPERADOR",
         subAcao: "CONFIRMAR_EXPEDICAO",
@@ -612,16 +634,22 @@ async function finalizarLoteContabil(idPedido) {
     const resultado = await resposta.json();
 
     if (resultado.sucesso) {
-      alert(`[EXPEDIDO] ${resultado.mensagem}`);
-      carregarFilaExpedicao(); // Recarrega o painel instantaneamente
-      if (typeof conectarNodoRegional === "function") conectarNodoRegional(); // Atualiza estoque na home
+      alert(`[DESPACHADO COM SUCESSO] ${resultado.mensagem}`);
+      carregarFilaExpedicao(); // Limpa e atualiza o painel fiscal na hora
     } else {
-      alert(`[ERRO] ${resultado.mensagem}`);
+      alert(`[ERRO TRANSACIONAL] ${resultado.mensagem}`);
+      botao.disabled = false;
+      botao.innerHTML = "Despachar Lote";
     }
   } catch (err) {
-    alert("Erro crítico de rede ao processar fechamento de lote contábil.");
+    alert("Erro de comunicação ao processar baixa contábil definitiva.");
+    botao.disabled = false;
+    botao.innerHTML = "Despachar Lote";
   }
 }
+
+
+
 
 /**
  * Abre o modal e busca os itens do pedido via API Fetch
