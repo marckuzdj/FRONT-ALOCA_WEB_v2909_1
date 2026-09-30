@@ -431,7 +431,7 @@ async function buscarPedidosHoje() {
 
         return `
           <tr>
-            <td><strong>${p.id_pedido}</strong></td>
+            <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline; cursor: pointer;">${p.id_pedido}</a></td>
             <td>${p.usuario || "Regional"}</td>
             <td>${horaFormatada} h</td>
             <td><span class="badge" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
@@ -623,8 +623,104 @@ async function finalizarLoteContabil(idPedido) {
   }
 }
 
+/**
+ * Abre o modal e busca os itens do pedido via API Fetch
+ */
+async function abrirModalDetalhes(idPedido) {
+  const modal = document.getElementById("modalDetalhes");
+  const titulo = document.getElementById("modal-titulo");
+  const carregando = document.getElementById("modal-carregando");
+  const tabela = document.getElementById("modal-tabela");
+  const corpoItens = document.getElementById("modal-corpo-itens");
+
+  // Exibe o modal e reseta o estado interno de carregamento
+  modal.style.display = "flex";
+  titulo.innerHTML = `// PEDIDO: ${idPedido}`;
+  carregando.style.display = "block";
+  tabela.style.display = "none";
+  corpoItens.innerHTML = "";
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ acao: "OBTER_DETALHES_PEDIDO", idPedido: idPedido })
+    });
+    
+    const resJson = await resposta.json();
+    carregando.style.display = "none";
+
+    if (resJson.sucesso) {
+      tabela.style.display = "table";
+      corpoItens.innerHTML = resJson.dados.map(item => `
+        <tr>
+          <td><strong>${item.sku}</strong></td>
+          <td style="font-weight: bold; color: var(--accent);">${item.quantidade} un</td>
+        </tr>
+      `).join('');
+    } else {
+      corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Erro: ${resJson.mensagem}</td></tr>`;
+      tabela.style.display = "table";
+    }
+  } catch (err) {
+    carregando.style.display = "none";
+    tabela.style.display = "table";
+    corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Falha crítica de rede ao conectar à API.</td></tr>`;
+  }
+}
+
+function fecharModalDetalhes() {
+  document.getElementById("modalDetalhes").style.display = "none";
+}
 
 </script>
 
+<!-- Componente Modal: Detalhes do Pedido (Nu-Style White Mode) -->
+<div id="modalDetalhes" style="
+  display: none; 
+  position: fixed; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(0, 0, 0, 0.4); 
+  backdrop-filter: blur(4px); 
+  z-index: 1000; 
+  justify-content: center; 
+  align-items: center;
+">
+  <div style="
+    background: var(--bg-surface); 
+    border: 2px solid var(--border); 
+    width: 100%; 
+    max-width: 600px; 
+    padding: 2rem; 
+    border-left: 6px solid var(--accent);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  ">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h3 id="modal-titulo">// DETALHES DO PEDIDO</h3>
+      <button onclick="fecharModalDetalhes()" style="background: none; color: var(--text-muted); padding: 0.2rem 0.5rem; font-size: 1.2rem; border: none; font-weight: bold;">✕</button>
+    </div>
+    
+    <div id="modal-carregando" style="color: var(--accent); font-family: monospace; display: none;">⏳ Buscando composição do lote no banco distribuído...</div>
+    
+    <table id="modal-tabela" style="margin-top: 0; display: none;">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Quantidade Solicitada</th>
+        </tr>
+      </thead>
+      <tbody id="modal-corpo-itens">
+        <!-- Injeção dinâmica dos itens -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  
 </body>
 </html>
