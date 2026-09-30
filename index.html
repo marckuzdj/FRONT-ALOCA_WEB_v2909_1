@@ -391,34 +391,52 @@ async function buscarPedidosHoje() {
       }
 
       corpoFila.innerHTML = dadosHttp.dados.map(p => {
-        // CORREÇÃO DO HORÁRIO: Trata a string de data substituindo espaços por "T" ou isolando a hora de forma segura
         let horaFormatada = "--:--";
         if (p.timestamp_criacao) {
           try {
             const d = new Date(p.timestamp_criacao);
-            // Se o construtor Date do navegador der erro ou NaN, faz o plano B por RegExp/Texto
             if (!isNaN(d.getTime())) {
               horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             } else {
-              // Plano B: Extrai a hora direto do texto enviado pelo Apps Script se for string
               const correspondenciaHora = p.timestamp_criacao.match(/\d{2}:\d{2}/);
-              if (correspondenciaHora) horaFormatada = correspondenciaHora[0];
+              if (correspondenciaHora) horaFormatada = correspondenciaHora;
             }
           } catch(err) {
             horaFormatada = "--:--";
           }
         }
 
+        // APLICANDO A BARREIRA VISUAL DE STATUS (UX REGRA CRÍTICA)
+        let botaoAcaoHtml = "";
+        
+        if (p.status === "Em Separação") {
+          // Se já está em separação, renderiza um botão travado em estilo "Inativo/Disabled"
+          botaoAcaoHtml = `
+            <button disabled style="
+              padding: 0.4rem 0.8rem; 
+              font-size: 0.85rem; 
+              background: #f3f4f6; 
+              color: var(--text-muted); 
+              border: 1px solid var(--border); 
+              cursor: not-allowed; 
+              opacity: 0.7;
+            ">🔒 Em Separação</button>
+          `;
+        } else {
+          // Se ainda estiver pendente (Aguardando Separação), renderiza o botão normal ativo
+          botaoAcaoHtml = `
+            <button onclick="dispararOndaPicking('${p.id_pedido}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Extrair Pedido</button>
+          `;
+        }
+
         return `
           <tr>
             <td><strong>${p.id_pedido}</strong></td>
-            <!-- CORREÇÃO DO SOLICITANTE: Ajustado de usuario_solicitante para usuario -->
             <td>${p.usuario || "Regional"}</td>
             <td>${horaFormatada} h</td>
             <td><span class="badge" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
-            <td>
-              <button onclick="dispararOndaPicking('${p.id_pedido}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Extrair Pedido</button>
-            </td>
+            <!-- Injeta dinamicamente o botão com a trava de segurança aplicada -->
+            <td>${botaoAcaoHtml}</td>
           </tr>
         `;
       }).join('');
