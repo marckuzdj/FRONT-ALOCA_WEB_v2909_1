@@ -61,8 +61,8 @@
 
   <div class="layout">
     <nav>
-      <button class="nav-link active" onclick="navegar('catalogo')">// VER CATALOGO</button>
-      <button class="nav-link" onclick="navegar('upload')">// SUBIR CSV (LOTE)</button>
+      <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
+      <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
     </nav>
 
     <main>
@@ -105,12 +105,25 @@
       segmento: "uniforme" // Segmento vinculado ao perfil do usuário
     };
 
-    function navegar(id) {
+    function navegar(id, elementoClicado) {
+      // 1. Remove o estado ativo de todas as telas e links
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-      document.getElementById(`view-${id}`).classList.add('active');
-      event.target.classList.add('active');
+      
+      // 2. Ativa a nova tela correspondente
+      const telaAlvo = document.getElementById(`view-${id}`);
+      if (telaAlvo) {
+        telaAlvo.classList.add('active');
+      } else {
+        console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
+      }
+      
+      // 3. Ativa o botão correto usando o parâmetro seguro
+      if (elementoClicado) {
+        elementoClicado.classList.add('active');
+      }
     }
+
 
     async function conectarNodoRegional() {
       AppState.uf = document.getElementById("ufSelector").value;
