@@ -176,7 +176,6 @@ function lerArquivoCSV(input) {
   const consoleOut = document.getElementById("consoleOut");
   consoleOut.style.display = "block";
   
-  // Proteção básica para capturar a referência correta do arquivo
   if (!input.files || input.files.length === 0) {
     consoleOut.innerHTML = `<span style="color: var(--error);">[ERRO] Nenhum arquivo foi selecionado.</span>\n`;
     return;
@@ -192,21 +191,30 @@ function lerArquivoCSV(input) {
 
   const leitor = new FileReader();
   leitor.onload = async function(e) {
-    // Quebra por linhas removendo resíduos invisíveis (\r)
     const textoBruto = e.target.result;
     const linhasRaw = textoBruto.split(/\r?\n/);
     
     let itens = [];
     let errosSintaxe = [];
 
-    // Começa na linha 1 para ignorar o cabeçalho (sku,quantidade)
+    // INTELEGÊNCIA DE AUTO-DETECÇÃO DE SEPARADOR
+    // Analisa a linha do cabeçalho para descobrir o caractere divisor real do arquivo
+    const primeiraLinha = linhasRaw[0] ? linhasRaw[0].trim() : "";
+    let separador = ","; // Padrão convencional
+    
+    if (primeiraLinha.includes(";")) {
+      separador = ";";
+    }
+    
+    consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
+
+    // Inicializa a varredura a partir da linha 1 (pulando cabeçalhos)
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
-      if (!linhaLimpa) continue; // Ignora linhas vazias no meio ou fim do arquivo
+      if (!linhaLimpa) continue; // Descarta linhas nulas residuais de fim de arquivo
 
-      const cols = linhaLimpa.split(",");
+      const cols = linhaLimpa.split(separador);
       
-      // Validação mecânica rígida se a linha possui pelo menos 2 colunas
       if (cols && cols.length >= 2) {
         const skuBruto = cols[0] ? cols[0].toString().trim() : "";
         const qtdBruto = cols[1] ? cols[1].toString().trim() : "";
@@ -214,36 +222,40 @@ function lerArquivoCSV(input) {
         const skuLimpo = skuBruto.toUpperCase();
         const qtdLimpa = parseInt(qtdBruto, 10);
 
-        // Se o SKU for vazio ou a quantidade não for um número válido
         if (!skuLimpo || isNaN(qtdLimpa)) {
-          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos (Encontrado SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
+          errosSintaxe.push(`Linha ${i + 1}: Dados corrompidos (Encontrado SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
           continue;
         }
 
-        itens.push({ sku: skuLimpo, quantidade: qtdLimpa });
+        itens.push({ sku: skuLimpo, quantity: qtdLimpa }); // Correção de chave do objeto de payload
       } else {
-        // Se a linha tiver dados mas não tiver vírgula separando
-        errosSintaxe.push(`Linha ${i + 1}: Formato incorreto. Use vírgula como separador.`);
+        errosSintaxe.push(`Linha ${i + 1}: Erro de leitura estrutural na linha. Verifique os dados.`);
       }
     }
 
-    // Exibe os erros na tela se houver falha de leitura em alguma linha
     if (errosSintaxe.length > 0) {
       consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[LOTE REJEITADO] Erros de formatação encontrados:</span>\n` + errosSintaxe.join("\n");
       return;
     }
 
     if (itens.length === 0) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[ERRO] O arquivo CSV não contém nenhuma linha de dados válida. Verifique se o separador é vírgula (,).</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[ERRO] O arquivo CSV não contém nenhuma linha de dados válida.</span>`;
       return;
     }
 
     consoleOut.innerHTML += `> Lote sanitizado com sucesso. Enviando ${itens.length} itens de forma atômica para o banco distribuído...\n`;
     
+    // Alinhamento exato com o backend: o objeto espera a propriedade exata 'itens' mapeada
+    const payloadEnvio = {
+      acao: "CRIAR_PEDIDO",
+      usuario: AppState.usuario,
+      itens: itens.map(it => ({ sku: it.sku, quantidade: it.quantity }))
+    };
+
     try {
       const resposta = await fetch(AppState.apiUrl, {
         method: "POST",
-        body: JSON.stringify({ acao: "CRIAR_PEDIDO", usuario: AppState.usuario, itens: itens })
+        body: JSON.stringify(payloadEnvio)
       });
       
       const resJson = await resposta.json();
@@ -251,19 +263,20 @@ function lerArquivoCSV(input) {
       if (resJson.sucesso) {
         consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">[SUCESSO] ${resJson.mensagem}</span>`;
         if (typeof conectarNodoRegional === "function") {
-          conectarNodoRegional(); // Atualiza a tabela de saldos na tela
+          conectarNodoRegional();
         }
       } else {
         consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[REJEITADO PELO BANCO DE DADOS]</span>\n${resJson.mensagem}\n`;
         if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
       }
     } catch (err) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor do Apps Script não respondeu. Verifique se a sua API está ativa e aceitando conexões.</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor não respondeu. Certifique-se de que a API está ativa e com permissão pública de acesso.</span>`;
     }
   };
   
   leitor.readAsText(arquivo);
 }
+
 
 
 </script>
