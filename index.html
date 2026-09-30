@@ -430,55 +430,71 @@ async function buscarPedidosHoje() {
   }
 }
 
-// 2. Dispara a transição atômica para "Em Separação" com Logs de UX em Tempo Real
+// 2. Dispara a transição atômica para "Em Separação" com Motor de Retry Automático
 async function dispararOndaPicking(idPedido, botaoElemento) {
   if (!confirm(`Deseja gerar o corte e mover o pedido ${idPedido} para "Em Separação"?`)) return;
 
-  // Se o botão não foi passado diretamente, tenta localizá-lo na linha
   const btn = botaoElemento || event.target;
   
-  // Bloqueia interações duplicadas para evitar dupla gravação concorrente
+  // Trava o botão para impedir cliques múltiplos destrutivos
   btn.disabled = true;
   btn.style.opacity = "0.6";
   btn.style.cursor = "not-allowed";
 
-  // Passo 1: Início da Jornada Transacional
-  btn.innerHTML = "⏳ [1/4] Conectando API...";
+  // Configuração da esteira de resiliência
+  const maxTentativas = 3;
+  let tentativaAtual = 0;
+  let sucessoTransacao = false;
+  let resultadoJson = null;
 
-  try {
-    // Passo 2: Disparo do Payload via API Gateway
-    btn.innerHTML = "📡 [2/4] Enviando Lote...";
-    
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: {
-        "Content-Type": "text/plain"
-      },
-      body: JSON.stringify({
-        acao: "MUDAR_STATUS_OPERADOR",
-        subAcao: "EXTRAIR_PARA_SEPARACAO",
-        idPedido: idPedido,
-        usuario: AppState.usuario
-      })
-    });
+  while (tentativaAtual < maxTentativas && !sucessoTransacao) {
+    try {
+      tentativaAtual++;
+      
+      if (tentativaAtual === 1) {
+        btn.innerHTML = "⏳ [1/4] Conectando API...";
+      } else {
+        btn.innerHTML = `⚠️ Re-tentando [${tentativaAtual}/${maxTentativas}]...`;
+        // Aguarda 1 segundo completo para dar tempo do servidor limpar travas antigas de memória
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
 
-    if (!resposta.ok) {
-      throw new Error(`HTTP status ${resposta.status}`);
+      const resposta = await fetch(AppState.apiUrl, {
+        method: "POST",
+        mode: "cors",
+        redirect: "follow", // Força o navegador a perseguir o redirecionamento 302 do Google
+        headers: {
+          "Content-Type": "text/plain" // Mantido text/plain estrito para evitar pre-flight OPTIONS requests
+        },
+        body: JSON.stringify({
+          acao: "MUDAR_STATUS_OPERADOR",
+          subAcao: "EXTRAIR_PARA_SEPARACAO",
+          idPedido: idPedido,
+          usuario: AppState.usuario
+        })
+      });
+
+      if (resposta.ok) {
+        resultadoJson = await resposta.json();
+        sucessoTransacao = true;
+      } else {
+        console.warn(`[API] Servidor retornou código HTTP ${resposta.status} na tentativa ${tentativaAtual}`);
+      }
+
+    } catch (err) {
+      console.warn(`[Rede] Micro-queda interceptada na tentativa ${tentativaAtual}:`, err.message);
+      // Se caiu aqui devido ao "Failed to fetch", o loop vai tentar novamente até o limite de maxTentativas
     }
+  }
 
-    // Passo 3: Processamento e Leitura da Resposta do Servidor
+  // PROCESSAMENTO DO VEREDITO FINAL APÓS AS RETENTATIVAS
+  if (sucessoTransacao && resultadoJson) {
     btn.innerHTML = "⚙️ [3/4] Gravando Banco...";
-    const resultado = await resposta.json();
-
-    // Passo 4: Conclusão e Feedback Visual Final
-    btn.innerHTML = "✅ [4/4] Concluído!";
-
-    if (resultado.sucesso) {
-      // Pequeno delay intencional (300ms) apenas para o operador enxergar o estado de sucesso (UX Comfort)
+    
+    if (resultadoJson.sucesso) {
+      btn.innerHTML = "✅ [4/4] Concluído!";
       setTimeout(() => {
-        alert(`[ONDA INICIADA] ${resultado.mensagem}`);
+        alert(`[ONDA INICIADA] ${resultadoJson.mensagem}`);
         try {
           buscarPedidosHoje(); 
         } catch (errRender) {
@@ -486,42 +502,32 @@ async function dispararOndaPicking(idPedido, botaoElemento) {
         }
       }, 300);
     } else {
-      // Se o banco rejeitar (ex: pedido já extraído por outro operador simultâneo)
       btn.innerHTML = "❌ Rejeitado";
       btn.style.background = "var(--error)";
       btn.style.color = "#fff";
-      alert(`[ERRO TRANSACIONAL] ${resultado.mensagem}`);
-      
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
-        btn.style.background = "";
-        btn.innerHTML = "Extrair Pedido";
-      }, 3000);
+      alert(`[ERRO TRANSACIONAL] ${resultadoJson.mensagem}`);
+      resetarBotaoEstadoOriginal(btn);
     }
-  } catch (err) {
-    // Tratamento de falha física de rede ou queda de conexão
+  } else {
+    // Se estourar todas as 3 tentativas sem conseguir resposta limpa do Google
     btn.innerHTML = "⚠️ Falha de Conexão";
     btn.style.background = "var(--error)";
     btn.style.color = "#fff";
-    
-    alert("Erro de comunicação ao processar transição de status.");
-    console.error("[Aloca WEB] Falha na comunicação HTTP ou processamento:", err);
-
-    // Devolve o controle do botão para o operador tentar novamente após 3 segundos
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.style.opacity = "1";
-      btn.style.cursor = "pointer";
-      btn.style.background = "";
-      btn.innerHTML = "Extrair Pedido";
-    }, 3000);
+    alert("Erro de comunicação ao processar transição de status após múltiplas tentativas. Verifique a planilha.");
+    resetarBotaoEstadoOriginal(btn);
   }
 }
 
-
-
+// Função auxiliar para restaurar a usabilidade do botão em caso de falhas
+function resetarBotaoEstadoOriginal(btn) {
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+    btn.style.background = "";
+    btn.innerHTML = "Extrair Pedido";
+  }, 3000);
+}
 
   /**
  * MÓDULO 3: Ações de Liquidação de Lote e Fechamento Contábil
