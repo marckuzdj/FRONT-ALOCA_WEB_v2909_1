@@ -372,13 +372,30 @@ async function buscarPedidosHoje() {
       }
 
       corpoFila.innerHTML = dadosHttp.dados.map(p => {
-        // Formata o horário do timestamp para exibição limpa
-        const horario = new Date(p.timestamp_criacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        // CORREÇÃO DO HORÁRIO: Trata a string de data substituindo espaços por "T" ou isolando a hora de forma segura
+        let horaFormatada = "--:--";
+        if (p.timestamp_criacao) {
+          try {
+            const d = new Date(p.timestamp_criacao);
+            // Se o construtor Date do navegador der erro ou NaN, faz o plano B por RegExp/Texto
+            if (!isNaN(d.getTime())) {
+              horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            } else {
+              // Plano B: Extrai a hora direto do texto enviado pelo Apps Script se for string
+              const correspondenciaHora = p.timestamp_criacao.match(/\d{2}:\d{2}/);
+              if (correspondenciaHora) horaFormatada = correspondenciaHora[0];
+            }
+          } catch(err) {
+            horaFormatada = "--:--";
+          }
+        }
+
         return `
           <tr>
             <td><strong>${p.id_pedido}</strong></td>
-            <td>${p.usuario_solicitante}</td>
-            <td>${horario} h</td>
+            <!-- CORREÇÃO DO SOLICITANTE: Ajustado de usuario_solicitante para usuario -->
+            <td>${p.usuario || "Regional"}</td>
+            <td>${horaFormatada} h</td>
             <td><span class="badge" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
             <td>
               <button onclick="dispararOndaPicking('${p.id_pedido}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Extrair Pedido</button>
