@@ -60,13 +60,14 @@
   </header>
 
   <div class="layout">
-    <nav>
-      <button class="nav-link active" onclick="navegar('catalogo', this)">// CATÁLOGO DE PRODUTOS</button>
-      <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
-      <button class="nav-btn" onclick="alternarVisao('operacaoLogistica', this)">// SEPARAÇÃO & PICKING</button>
-      <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
-    </nav>
-
+    
+      <nav>
+        <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
+        <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
+        <button class="nav-link" onclick="navegar('operacaoLogistica', this)">// SEPARAÇÃO & PICKING</button>
+        <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
+      </nav>
+    
     <main>
       <!-- Tela: Catálogo -->
       <div id="view-catalogo" class="view active">
@@ -162,33 +163,34 @@
   /**
    * 1. Sistema de Navegação SPA Blindado
    */
-  function navegar(id, elementoClicado) {
-    // Remove o estado ativo de todas as telas e links
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
-    
-    // Ativa a nova tela correspondente
-    const telaAlvo = document.getElementById(`view-${id}`);
-    if (telaAlvo) {
-      telaAlvo.classList.add('active');
-    } else {
-      console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
-    }
-    
-    // Ativa o botão correto usando o parâmetro seguro (this)
-    if (elementoClicado) {
-      elementoClicado.classList.add('active');
-    }
-   
-    // Adicione esta verificação no final da sua função navegar(id, elementoClicado) existente:
-    if (id === 'faturamentoRPA') {
-      carregarFilaExpedicao();
-    }
-    
-    if (id === 'operacaoLogistica') {
-      buscarPedidosHoje();
-    }    
+function navegar(id, elementoClicado) {
+  // Remove o estado ativo de todas as telas e links (aspas duplas corrigidas)
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".nav-link").forEach(n => n.classList.remove("active"));
+  
+  // Ativa a nova tela correspondente
+  const telaAlvo = document.getElementById(`view-${id}`);
+  if (telaAlvo) {
+    telaAlvo.classList.add("active");
+  } else {
+    console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
   }
+  
+  // Ativa o botão correto usando o parâmetro seguro (this)
+  if (elementoClicado) {
+    elementoClicado.classList.add("active");
+  }
+ 
+  // Gatilhos automáticos de atualização de dados baseados na navegação
+  if (id === "faturamentoRPA") {
+    carregarFilaExpedicao();
+  }
+  
+  if (id === "operacaoLogistica") {
+    buscarPedidosHoje();
+  }    
+}
+
 
   /**
    * 2. Conector de leitura do Catálogo Regional
