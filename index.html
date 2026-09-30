@@ -321,19 +321,20 @@ function lerArquivoCSV(input) {
         body: JSON.stringify(payloadEnvio)
       });
       
+      // CONFIGURAÇÃO CORRIGIDA E LIMPA:
       const resJson = await resposta.json();
 
       if (resJson.sucesso) {
         consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">[SUCESSO] ${resJson.mensagem}</span>`;
         if (typeof conectarNodoRegional === "function") {
-          conectarNodoRegional();
+          conectarNodoRegional(); // Atualiza a tabela de saldos automaticamente
         }
       } else {
         consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[REJEITADO PELO BANCO DE DADOS]</span>\n${resJson.mensagem}\n`;
         if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
       }
     } catch (err) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor não respondeu. Certifique-se de que a API está ativa e com permissão pública de acesso.</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE LEITURA] Falha ao processar o retorno do servidor. Verifique o console (F12).</span>`;
     }
   };
   
