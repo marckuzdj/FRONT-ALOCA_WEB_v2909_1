@@ -425,18 +425,28 @@ async function dispararOndaPicking(idPedido) {
         usuario: AppState.usuario
       })
     });
+    
     const resultado = await resposta.json();
 
     if (resultado.sucesso) {
       alert(`[ONDA INICIADA] ${resultado.mensagem}`);
-      buscarPedidosHoje(); // Recarrega a fila atualizada na hora
+      
+      // ISOLAMENTO CIRÚRGICO: Protege a execução para que erros de renderização da data na fila não quebrem o alerta de sucesso
+      try {
+        buscarPedidosHoje(); 
+      } catch (errRender) {
+        console.warn("[Aloca WEB] Pedido atualizado, mas falhou ao renderizar a fila novamente:", errRender);
+      }
+      
     } else {
       alert(`[ERRO TRANSACIONAL] ${resultado.mensagem}`);
     }
   } catch (err) {
     alert("Erro de comunicação ao processar transição de status.");
+    console.error("[Aloca WEB] Falha na comunicação HTTP ou processamento:", err);
   }
 }
+
 
   /**
  * MÓDULO 3: Ações de Liquidação de Lote e Fechamento Contábil
