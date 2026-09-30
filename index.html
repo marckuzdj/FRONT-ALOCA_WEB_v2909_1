@@ -573,7 +573,8 @@ async function carregarFilaExpedicao() {
       mode: "cors",
       redirect: "follow",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_EM_SEPARACAO" })
+      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_PARA_FATURAMENTO" })
+      // body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_EM_SEPARACAO" })
     });
     const dadosHttp = await resposta.json();
 
