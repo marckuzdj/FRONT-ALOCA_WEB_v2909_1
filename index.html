@@ -166,21 +166,25 @@ function lerArquivoCSV(input) {
 
   const leitor = new FileReader();
   leitor.onload = async function(e) {
-    const linhas = e.target.result.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    // Quebra por linha e remove retornos de carro (\r) limpando espaços nas pontas
+    const linhasRaw = e.target.result.split(/\r?\n/);
     let itens = [];
     let errosSintaxe = [];
 
-    // Ignora o cabeçalho (i = 0) e percorre as linhas de dados
-    for (let i = 1; i < linhas.length; i++) {
-      const cols = linhas[i].split(",");
+    // Ignora a linha 0 (cabeçalho) e filtra linhas totalmente vazias antes de iterar
+    for (let i = 1; i < linhasRaw.length; i++) {
+      const linhaLimpa = linhasRaw[i].trim();
+      if (!linhaLimpa) continue; // Pula linhas em branco no meio ou fim do arquivo
+
+      const cols = linhaLimpa.split(",");
       
-      // Validação básica se a linha possui pelo menos duas colunas preenchidas
       if (cols.length >= 2) {
         const skuLimpo = cols[0].trim().toUpperCase();
         const qtdLimpa = parseInt(cols[1].trim(), 10);
 
+        // Se o SKU for nulo ou a quantidade não for um número válido, mapeia o erro
         if (!skuLimpo || isNaN(qtdLimpa)) {
-          errosSintaxe.push(`Linha ${i + 1}: SKU inválido ou Quantidade não numérica.`);
+          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos (Encontrado: "${linhaLimpa}")`);
           continue;
         }
 
@@ -188,34 +192,41 @@ function lerArquivoCSV(input) {
       }
     }
 
+    // Se houver qualquer falha de leitura, cancela o envio de primeira
     if (errosSintaxe.length > 0) {
-      consoleOut.innerHTML += `\n[ERRO DE ARQUIVO] Linhas malformadas detectadas:\n` + errosSintaxe.join("\n");
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[LOTE REJEITADO] Erros de sintaxe encontrados no arquivo:</span>\n` + errosSintaxe.join("\n");
       return;
     }
 
-    consoleOut.innerHTML += `> Enviando lote de ${itens.length} itens de forma atômica para a API da UF [${AppState.uf}]...\n`;
+    if (itens.length === 0) {
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO] O arquivo CSV não contém nenhuma linha de dados válida.</span>`;
+      return;
+    }
+
+    consoleOut.innerHTML += `> Lote sanitizado com sucesso. Enviando ${itens.length} itens de forma atômica...\n`;
     
     try {
       const resposta = await fetch(AppState.apiUrl, {
         method: "POST",
         body: JSON.stringify({ acao: "CRIAR_PEDIDO", usuario: AppState.usuario, itens: itens })
       });
-      const resJson = await resposta.json();
+      const resJson = await responseObj = await resposta.json();
 
       if (resJson.sucesso) {
-        consoleOut.innerHTML += `\n<span style="color: var(--accent);">[SUCESSO] ${resJson.mensagem}</span>`;
-        conectarNodoRegional(); // Atualiza a tabela do catálogo na tela
+        consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">[SUCESSO] ${resJson.mensagem}</span>`;
+        conectarNodoRegional(); // Atualiza instantaneamente a tabela do catálogo na tela!
       } else {
-        consoleOut.innerHTML += `\n<span style="color: var(--error);">[LOTE REJEITADO PELO BANCO]</span>\n${resJson.mensagem}\n`;
+        consoleOut.innerHTML += `\n<span style="color: var(--error);">[REJEITADO PELO BANCO DE DADOS]</span>\n${resJson.mensagem}\n`;
         if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
       }
     } catch (err) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE CONEXÃO] Sem resposta da API. Verifique o console do desenvolvedor (F12).</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor não respondeu à requisição HTTP.</span>`;
     }
   };
   
   leitor.readAsText(input.files[0]);
 }
+
 
 
   </script>
