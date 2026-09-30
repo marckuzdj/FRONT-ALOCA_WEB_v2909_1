@@ -91,6 +91,32 @@
     </main>
   </div>
 
+  <!-- Tela: Controle Operador (Fila de Separação) -->
+<div id="view-operacaoLogistica" class="view">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+      <h2>Fila Ativa de Separação e Picking</h2>
+      <p style="color: var(--text-muted);">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+    </div>
+    <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
+  </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>ID Pedido</th>
+        <th>Solicitante</th>
+        <th>Horário</th>
+        <th>Status</th>
+        <th>Ações Operacionais</th>
+      </tr>
+    </thead>
+    <tbody id="fila-picking-corpo">
+      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
+    </tbody>
+  </table>
+</div>
+
 <script>
   // Centralização de Endpoints das suas macros do Apps Script por UF
   const EndpointsUFs = {
@@ -277,6 +303,83 @@ function lerArquivoCSV(input) {
   leitor.readAsText(arquivo);
 }
 
+/**
+ * MÓDULO 2: Consultas e Transições de Estado do Operador Logístico
+ */
+
+// 1. Busca os pedidos filtrados estritamente pela data atual
+async function buscarPedidosHoje() {
+  const corpoFila = document.getElementById("fila-picking-corpo");
+  
+  if (!AppState.apiUrl) {
+    corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Selecione uma UF ativa no cabeçalho.</td></tr>`;
+    return;
+  }
+
+  corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--accent)">Extraindo fila diária de picking via API Gateway...</td></tr>`;
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" })
+    });
+    const dadosHttp = await resposta.json();
+
+    if (dadosHttp.sucesso) {
+      if (dadosHttp.dados.length === 0) {
+        corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); padding: 2rem; text-align: center;">Nenhum pedido pendente gerado na data de hoje para esta UF.</td></tr>`;
+        return;
+      }
+
+      corpoFila.innerHTML = dadosHttp.dados.map(p => {
+        // Formata o horário do timestamp para exibição limpa
+        const horario = new Date(p.timestamp_criacao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return `
+          <tr>
+            <td><strong>${p.id_pedido}</strong></td>
+            <td>${p.usuario_solicitante}</td>
+            <td>${horario} h</td>
+            <td><span class="badge" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
+            <td>
+              <button onclick="dispararOndaPicking('${p.id_pedido}')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Extrair Pedido</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } else {
+      corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Erro do Servidor: ${dadosHttp.mensagem}</td></tr>`;
+    }
+  } catch (err) {
+    corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Falha crítica de comunicação com o nó de rede da UF.</td></tr>`;
+  }
+}
+
+// 2. Dispara a transição atômica para "Em Separação" bloqueando cancelamentos diretos
+async function dispararOndaPicking(idPedido) {
+  if (!confirm(`Deseja gerar o corte e mover o pedido ${idPedido} para "Em Separação"?`)) return;
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      body: JSON.stringify({
+        acao: "MUDAR_STATUS_OPERADOR",
+        subAcao: "EXTRAIR_PARA_SEPARACAO",
+        idPedido: idPedido,
+        usuario: AppState.usuario
+      })
+    });
+    const resultado = await resposta.json();
+
+    if (resultado.sucesso) {
+      alert(`[ONDA INICIADA] ${resultado.mensagem}`);
+      buscarPedidosHoje(); // Recarrega a fila atualizada na hora
+    } else {
+      alert(`[ERRO TRANSACIONAL] ${resultado.mensagem}`);
+    }
+  } catch (err) {
+    alert("Erro de comunicação ao processar transição de status.");
+  }
+}
 
 
 </script>
