@@ -43,8 +43,19 @@
     
     table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
     th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-    
+    /* Localize a regra 'th' antiga e substitua por esta: */
+    th { 
+      color: var(--text-muted); 
+      font-size: 0.8rem; 
+      text-transform: uppercase; 
+      
+      /* MOTOR DE FIXAÇÃO DO CABEÇALHO DA TABELA */
+      position: sticky;
+      top: 0;
+      background-color: var(--bg-surface); /* Força o fundo branco para tampar os produtos que rolam por baixo */
+      z-index: 10; /* Garante que os títulos fiquem por cima das linhas de dados */
+      border-bottom: 2px solid var(--border); /* Deixa a linha de divisão mais marcada ao rolar */
+    }    
     /* Console "Estilo Documento" elegante e legível */
     .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
     .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
