@@ -5,46 +5,100 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aloca WEB // External Project</title>
   <style>
-      :root {
-        /* Nu-Style Purple & Light Mode Palette */
-        --bg-main: #f8f9fa;
-        --bg-surface: #ffffff;
-        --border: #e4e7eb;
-        --accent: #820ad1;      /* Roxo Nu marcante */
-        --error: #e02424;       /* Vermelho institucional limpo */
-        --text: #111111;        /* Texto principal de alto contraste */
-        --text-muted: #6b7280;  /* Legendas e marcas secundárias */
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', system-ui, sans-serif; }
-      body { background-color: var(--bg-main); color: var(--text); padding: 2rem; }
-      
-      header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); margin-bottom: 2rem; }
-      .logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
-      .logo span { color: var(--accent); }
-      
-      select, input, button { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; outline: none; font-weight: 600; }
-      button { cursor: pointer; background: var(--accent); color: #ffffff; border: none; transition: opacity 0.2s; }
-      button:hover { opacity: 0.9; }
-      
-      .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; }
-      nav { display: flex; flex-direction: column; gap: 0.5rem; }
-      .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
-      .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
-      
-      main { background: var(--bg-surface); border: 1px solid var(--border); padding: 2rem; min-height: 60vh; }
-      .view { display: none; }
-      .view.active { display: block; }
-      
-      table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-      th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
-      th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-      
-      /* Console "Estilo Documento" elegante e legível */
-      .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
-      .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
-      .dropzone:hover { border-color: var(--accent); color: var(--text); background: #fcfaff; }
+    :root {
+      /* Nu-Style Purple & Light Mode Palette */
+      --bg-main: #f8f9fa;
+      --bg-surface: #ffffff;
+      --border: #e4e7eb;
+      --accent: #820ad1;      /* Roxo Nu marcante */
+      --error: #e02424;       /* Vermelho institucional limpo */
+      --text: #111111;        /* Texto principal de alto contraste */
+      --text-muted: #6b7280;  /* Legendas e marcas secundárias */
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', system-ui, sans-serif; }
+    
+    /* 1. Ajuste de altura e overflow para permitir rolagens internas fixas */
+    body { background-color: var(--bg-main); color: var(--text); padding: 2rem; height: 100vh; overflow: hidden; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); margin-bottom: 2rem; }
+    .logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    
+    select, input, button { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; outline: none; font-weight: 600; }
+    button { cursor: pointer; background: var(--accent); color: #ffffff; border: none; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    
+    /* 2. Ajuste de viewport útil para o Grid Principal */
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; height: calc(100vh - 7rem); }
+    
+    /* 3. Trava a barra lateral de navegação no topo útil */
+    nav { display: flex; flex-direction: column; gap: 0.5rem; position: sticky; top: 0; height: fit-content; }
+    .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
+    .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
+    
+    /* 4. Habilita a rolagem interna estrita de cada aba independente */
+    main { background: var(--bg-surface); border: 1px solid var(--border); padding: 2rem; height: 100%; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .view { display: none; }
+    .view.active { display: block; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+    th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+    
+    /* Console "Estilo Documento" elegante e legível */
+    .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
+    .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
+    .dropzone:hover { border-color: var(--accent); color: var(--text); background: #fcfaff; }
 
+    /* ==========================================================================
+       5. NOVAS CLASSES: Motor de Fixação do Carrinho e Notificações Toast 
+       ========================================================================== */
+    .catalogo-grid {
+      display: grid; 
+      grid-template-columns: 1fr 340px; 
+      gap: 2rem; 
+      align-items: start;
+    }
+
+    .carrinho-drawer {
+      background: var(--bg-main); 
+      border: 1px solid var(--border); 
+      padding: 1.5rem; 
+      border-radius: 4px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+      position: sticky; 
+      top: 0; 
+      border-top: 4px solid var(--accent);
+      max-height: calc(100vh - 12rem);
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #111111;
+      color: #ffffff;
+      padding: 1rem 1.5rem;
+      border-radius: 4px;
+      border-left: 4px solid var(--accent);
+      font-family: monospace;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: slideInRoxo 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInRoxo {
+      from { transform: translateY(1rem); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   </style>
+
 </head>
 <body>
 
@@ -70,16 +124,16 @@
     
     <main>
       
-    <!-- Tela: Catálogo Híbrido com Busca e Carrinho (Módulo 1 Upgrade) -->
+    <!-- Tela: Catálogo Híbrido com Busca e Carrinho Fixo -->
     <div id="view-catalogo" class="view active">
-      <div style="display: grid; grid-template-columns: 1fr 320px; gap: 2rem;">
+      <div class="catalogo-grid">
         
-        <!-- Coluna Esquerda: Filtros e Tabela de Itens -->
+        <!-- Coluna Esquerda Rolável -->
         <div>
           <h2>Catálogo de Itens Regional</h2>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
           
-          <!-- Caixa de Busca Nu-Style -->
+          <!-- Caixa de Busca Fixada no escopo acima -->
           <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
             <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
           </div>
@@ -100,15 +154,15 @@
           </table>
         </div>
     
-        <!-- Coluna Direita: Carrinho de Compras (Nu-Style Drawer) -->
-        <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 1.5rem; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; height: fit-content; border-top: 4px solid var(--accent);">
+        <!-- Coluna Direita Fixa: Gaveta do Carrinho -->
+        <div class="carrinho-drawer">
           <div>
-            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO</h3>
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO CORRENTE</h3>
             <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">
               Carrinho vazio. Use a tabela ao lado para incluir itens.
             </div>
-            <ul id="carrinho-lista" style="list-style: none; max-height: 300px; overflow-y: auto; padding-right: 0.5rem; display: none;">
-              <!-- Injeção dinâmica dos itens do carrinho -->
+            <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;">
+              <!-- Injeção dinâmica -->
             </ul>
           </div>
           
@@ -123,7 +177,6 @@
     
       </div>
     </div>
-
 
       <!-- Tela: Upload CSV -->
       <div id="view-upload" class="view">
@@ -832,8 +885,9 @@ function adicionarAoCarrinho(sku) {
   } else {
     AppState.carrinho.push({ sku: sku, nome: produto.nome_produto, quantidade: qtdDesejada });
   }
-
-  atualizarInterfaceCarrinho();
+    // Procure o final da sua função adicionarAoCarrinho(sku) e insira:
+    atualizarInterfaceCarrinho();
+    dispararToastNotificacao(sku, produto.nome_produto, qtdDesejada); // Dispara o pop-up invisível moderno!
 }
 
 function removerDoCarrinho(sku) {
@@ -922,6 +976,41 @@ async function finalizarPedidoManual(btn) {
     btn.disabled = false;
     btn.innerHTML = "🚀 Finalizar Pedido";
   }
+}
+
+/**
+ * Injeta e exibe um Toast flutuante Nu-Style no canto inferior da tela
+ */
+function dispararToastNotificacao(sku, nomeItem, quantidade) {
+  // Remove qualquer Toast anterior ativo para não encavalar notificações
+  const toastAntigo = document.getElementById("aloca-toast-ativo");
+  if (toastAntigo) toastAntigo.remove();
+
+  // Cria a estrutura física do elemento na árvore do navegador (DOM)
+  const toast = document.createElement("div");
+  toast.id = "aloca-toast-ativo";
+  toast.className = "toast-container";
+  
+  // Conteúdo do Toast no padrão Paper-Terminal roxo
+  toast.innerHTML = `
+    <span>💜</span>
+    <div>
+      <strong>+${quantidade} un</strong> de ${sku}<br>
+      <span style="color: #a78bfa; font-size:0.75rem;">${nomeItem.substring(0, 32)}...</span>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  // Destrói o elemento sozinho após 3.5 segundos (UX Fade Out)
+  setTimeout(() => {
+    if (toast) {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(0.5rem)";
+      toast.style.transition = "all 0.3s ease";
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3500);
 }
 
   
