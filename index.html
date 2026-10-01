@@ -63,24 +63,67 @@
     
       <nav>
         <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
-        <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
+        <button class="nav-link" onclick="navegar('upload', this)">// ENVIAR PEDIDO EM LOTE (CSV)</button>
         <button class="nav-link" onclick="navegar('operacaoLogistica', this)">// SEPARAÇÃO & PICKING</button>
         <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
       </nav>
     
     <main>
-      <!-- Tela: Catálogo -->
-      <div id="view-catalogo" class="view active">
-        <h2>Catálogo de Itens em Tempo Real</h2>
-        <table>
-          <thead>
-            <tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Físico</th><th>Reservado</th><th>Disponível</th></tr>
-          </thead>
-          <tbody id="lista-produtos">
-            <tr><td colspan="6" style="color:var(--text-muted)">Aguardando conexão com o nó regional da UF...</td></tr>
-          </tbody>
-        </table>
+      
+    <!-- Tela: Catálogo Híbrido com Busca e Carrinho (Módulo 1 Upgrade) -->
+    <div id="view-catalogo" class="view active">
+      <div style="display: grid; grid-template-columns: 1fr 320px; gap: 2rem;">
+        
+        <!-- Coluna Esquerda: Filtros e Tabela de Itens -->
+        <div>
+          <h2>Catálogo de Itens Regional</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+          
+          <!-- Caixa de Busca Nu-Style -->
+          <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+            <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+          </div>
+    
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Disponível</th>
+                <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+              </tr>
+            </thead>
+            <tbody id="lista-produtos">
+              <tr><td colspan="5" style="color:var(--text-muted)">Aguardando conexão com o nó regional da UF...</td></tr>
+            </tbody>
+          </table>
+        </div>
+    
+        <!-- Coluna Direita: Carrinho de Compras (Nu-Style Drawer) -->
+        <div style="background: var(--bg-main); border: 1px solid var(--border); padding: 1.5rem; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; height: fit-content; border-top: 4px solid var(--accent);">
+          <div>
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO CORRENTE</h3>
+            <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">
+              Carrinho vazio. Use a tabela ao lado para incluir itens.
+            </div>
+            <ul id="carrinho-lista" style="list-style: none; max-height: 300px; overflow-y: auto; padding-right: 0.5rem; display: none;">
+              <!-- Injeção dinâmica dos itens do carrinho -->
+            </ul>
+          </div>
+          
+          <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
+              <span>Total de Itens:</span>
+              <span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
+            </div>
+            <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
+          </div>
+        </div>
+    
       </div>
+    </div>
+
 
       <!-- Tela: Upload CSV -->
       <div id="view-upload" class="view">
@@ -704,6 +747,183 @@ function fecharModalDetalhes() {
   document.getElementById("modalDetalhes").style.display = "none";
 }
 
+
+
+// Adicione a propriedade 'carrinho' ao seu objeto AppState global
+AppState.carrinho = [];
+AppState.produtosBackup = []; // Guarda a cópia para a busca local ultra-rápida
+
+/**
+ * 1. Renderização do Catálogo Estendida (Com Inputs de Quantidade)
+ */
+function renderizarCatalogoHibrido(produtos) {
+  const tabela = document.getElementById("lista-produtos");
+  AppState.produtosBackup = produtos; // Alimenta o cache de busca
+
+  if (produtos.length === 0) {
+    tabela.innerHTML = `<tr><td colspan="5">Nenhum registro encontrado.</td></tr>`;
+    return;
+  }
+
+  tabela.innerHTML = produtos.map(p => `
+    <tr class="item-produto-linha" data-sku="${p.sku}" data-nome="${p.nome_produto.toLowerCase()}" data-cat="${p.categoria.toLowerCase()}">
+      <td><strong>${p.sku}</strong></td>
+      <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
+      <td><span class="badge" style="background: #f3f4f6; padding: 0.2rem 0.4rem; font-size: 0.75rem;">${p.categoria}</span></td>
+      <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
+      <td>
+        <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+          <input type="number" id="input_qtd_${p.sku}" min="1" max="${p.saldo_disponivel}" value="1" style="width: 60px; padding: 0.3rem; text-align: center;">
+          <button onclick="adicionarAoCarrinho('${p.sku}')" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">+</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// Lembre-se de alterar a linha de renderização dentro da sua função conectarNodoRegional() atual:
+// Troque a montagem antiga da tabela por: renderizarCatalogoHibrido(dadosHttp.dados);
+
+/**
+ * 2. Filtro de Busca Dinâmica em Tempo Real (Lado do Cliente - Ultra Instantâneo)
+ */
+function filtrarTabelaCatalogo() {
+  const termo = document.getElementById("buscaInput").value.trim().toLowerCase();
+  const linhas = document.querySelectorAll(".item-produto-linha");
+
+  linhas.forEach(linha => {
+    const sku = linha.getAttribute("data-sku").toLowerCase();
+    const nome = linha.getAttribute("data-nome");
+    const cat = linha.getAttribute("data-cat");
+
+    if (sku.includes(termo) || nome.includes(termo) || cat.includes(termo)) {
+      linha.style.display = "";
+    } else {
+      linha.style.display = "none";
+    }
+  });
+}
+
+/**
+ * 3. Gerenciamento do Carrinho Virtual
+ */
+function adicionarAoCarrinho(sku) {
+  const produto = AppState.produtosBackup.find(p => p.sku === sku);
+  const inputQtd = document.getElementById(`input_qtd_${sku}`);
+  const qtdDesejada = parseInt(inputQtd ? inputQtd.value : 1, 10);
+
+  if (!produto || isNaN(qtdDesejada) || qtdDesejada <= 0) return;
+
+  if (qtdDesejada > produto.saldo_disponivel) {
+    alert(`Estoque insuficiente! O saldo disponível para o SKU ${sku} é de ${produto.saldo_disponivel} un.`);
+    return;
+  }
+
+  // Verifica se o SKU já está no carrinho para apenas somar a quantidade
+  const itemExistente = AppState.carrinho.find(item => item.sku === sku);
+  if (itemExistente) {
+    const novaQtd = itemExistente.quantidade + qtdDesejada;
+    if (novaQtd > produto.saldo_disponivel) {
+      alert(`Aviso: A soma das quantidades no carrinho (${novaQtd}) excede o saldo disponível de ${produto.saldo_disponivel} un.`);
+      return;
+    }
+    itemExistente.quantity = novaQtd; // Alinha chaves
+  } else {
+    AppState.carrinho.push({ sku: sku, nome: produto.nome_produto, quantidade: qtdDesejada });
+  }
+
+  atualizarInterfaceCarrinho();
+}
+
+function removerDoCarrinho(sku) {
+  AppState.carrinho = AppState.carrinho.filter(item => item.sku !== sku);
+  atualizarInterfaceCarrinho();
+}
+
+function atualizarInterfaceCarrinho() {
+  const vazioDiv = document.getElementById("carrinho-vazio");
+  const listaUl = document.getElementById("carrinho-lista");
+  const acoesDiv = document.getElementById("carrinho-acoes");
+  const totalSpan = document.getElementById("carrinho-total-qtd");
+
+  if (AppState.carrinho.length === 0) {
+    vazioDiv.style.display = "block";
+    listaUl.style.display = "none";
+    acoesDiv.style.display = "none";
+    return;
+  }
+
+  vazioDiv.style.display = "none";
+  listaUl.style.display = "block";
+  acoesDiv.style.display = "block";
+
+  let totalGeral = 0;
+
+  listaUl.innerHTML = AppState.carrinho.map(item => {
+    totalGeral += item.quantidade;
+    return `
+      <li style="display: flex; justify-content: space-between; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem;">
+        <div>
+          <strong>${item.sku}</strong><br>
+          <span style="color: var(--text-muted);">${item.nome}</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span style="font-weight: bold; color: var(--accent);">${item.quantidade}x</span>
+          <button onclick="removerDoCarrinho('${item.sku}')" style="background: none; color: var(--error); border: none; padding: 0; cursor: pointer; font-size: 1rem;">✕</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  totalSpan.innerHTML = `${totalGeral} un`;
+}
+
+/**
+ * 4. Submissão Transacional do Carrinho Manual (Conecta com a mesma rota do CSV)
+ */
+async function finalizarPedidoManual(btn) {
+  if (AppState.carrinho.length === 0) return;
+  if (!confirm("Confirma o fechamento deste pedido manual e o envio para a fila de picking?")) return;
+
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Enviando Pedido...";
+
+  const payloadEnvio = {
+    acao: "CRIAR_PEDIDO",
+    usuario: AppState.usuario,
+    // Mapeia exatamente a chave 'itens' com a nomenclatura que o backend blindado espera
+    itens: AppState.carrinho.map(it => ({ sku: it.sku, quantidade: it.quantidade }))
+  };
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payloadEnvio)
+    });
+    
+    const resJson = await resposta.json();
+
+    if (resJson.sucesso) {
+      alert(`[SUCESSO] ${resJson.mensagem}`);
+      AppState.carrinho = []; // Limpa o carrinho
+      atualizarInterfaceCarrinho();
+      conectarNodoRegional(); // Recarrega o catálogo para abater o saldo disponível na tela
+    } else {
+      alert(`[REJEITADO PELO BANCO] ${resJson.mensagem}`);
+      btn.disabled = false;
+      btn.innerHTML = "🚀 Finalizar Pedido";
+    }
+  } catch (err) {
+    alert("Erro de comunicação ao enviar pedido manual.");
+    btn.disabled = false;
+    btn.innerHTML = "🚀 Finalizar Pedido";
+  }
+}
+
+  
 </script>
 
 <!-- Componente Modal: Detalhes do Pedido (Nu-Style White Mode) -->
