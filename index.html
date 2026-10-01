@@ -720,15 +720,18 @@ async function abrirModalDetalhes(idPedido) {
     const resJson = await resposta.json();
     carregando.style.display = "none";
 
-    if (resJson.sucesso) {
-      tabela.style.display = "table";
-      corpoItens.innerHTML = resJson.dados.map(item => `
-        <tr>
-          <td><strong>${item.sku}</strong></td>
-          <td style="font-weight: bold; color: var(--accent);">${item.quantidade} un</td>
-        </tr>
-      `).join('');
-    } else {
+  // Localize este trecho dentro da função abrirModalDetalhes no seu index.html e substitua:
+  if (resJson.sucesso) {
+    tabela.style.display = "table";
+    corpoItens.innerHTML = resJson.dados.map(item => `
+      <tr>
+        <td><strong>${item.sku}</strong></td>
+        <!-- Nova célula com o nome comercial do produto vindo do catálogo -->
+        <td><span style="font-size: 0.9rem; color: var(--text); font-weight: 500;">${item.nome}</span></td>
+        <td style="font-weight: bold; color: var(--accent); text-align: right;">${item.quantidade} un</td>
+      </tr>
+    `).join('');
+  } else {
       corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Erro: ${resJson.mensagem}</td></tr>`;
       tabela.style.display = "table";
     }
@@ -954,17 +957,20 @@ async function finalizarPedidoManual(btn) {
     
     <div id="modal-carregando" style="color: var(--accent); font-family: monospace; display: none;">⏳ Buscando composição do lote no banco distribuído...</div>
     
+    <!-- Localize a table do modalDetalhes e ajuste o thead para incluir o Produto -->
     <table id="modal-tabela" style="margin-top: 0; display: none;">
       <thead>
         <tr>
           <th>SKU</th>
-          <th>Quantidade Solicitada</th>
+          <th>Produto / Descrição</th> <!-- Nova Coluna Injetada -->
+          <th style="text-align: right;">Qtd Solicitada</th>
         </tr>
       </thead>
       <tbody id="modal-corpo-itens">
         <!-- Injeção dinâmica dos itens -->
       </tbody>
     </table>
+
   </div>
 </div>
 
