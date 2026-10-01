@@ -280,25 +280,21 @@ async function conectarNodoRegional() {
     }
   }
 
+  // AJUSTE CIRÚRGICO DA LIQUIDACAO DE DADOS:
   if (sucesso && dadosHttp && dadosHttp.sucesso) {
     if (dadosHttp.dados.length === 0) {
-      tabela.innerHTML = `<tr><td colspan="6">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
+      tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
       return;
     }
-    tabela.innerHTML = dadosHttp.dados.map(p => `
-      <tr>
-        <td><strong>${p.sku}</strong></td>
-        <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
-        <td>${p.categoria}</td>
-        <td>${p.saldo_fisico}</td>
-        <td>${p.saldo_reservado}</td>
-        <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
-      </tr>
-    `).join('');
+    
+    // GATILHO ATUALIZADO: Passa o bloco para a engine híbrida injetar os seletores de busca e inputs do carrinho
+    renderizarCatalogoHibrido(dadosHttp.dados);
+    
   } else {
-    tabela.innerHTML = `<tr><td colspan="6" style="color:var(--error); font-weight: bold;">❌ Nó Regional Indisponível. Tente atualizar a página ou selecione a UF novamente.</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente atualizar a página ou selecione a UF novamente.</td></tr>`;
   }
 }
+
 
 
 function lerArquivoCSV(input) {
@@ -758,13 +754,14 @@ AppState.produtosBackup = []; // Guarda a cópia para a busca local ultra-rápid
  */
 function renderizarCatalogoHibrido(produtos) {
   const tabela = document.getElementById("lista-produtos");
-  AppState.produtosBackup = produtos; // Alimenta o cache de busca
+  AppState.produtosBackup = produtos; // Alimenta o cache de busca local
 
   if (produtos.length === 0) {
-    tabela.innerHTML = `<tr><td colspan="5">Nenhum registro encontrado.</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro encontrado para este segmento.</td></tr>`;
     return;
   }
 
+  // O SEGREDO ESTÁ AQUI: Injeção estrita dos atributos data-sku, data-nome e data-cat
   tabela.innerHTML = produtos.map(p => `
     <tr class="item-produto-linha" data-sku="${p.sku}" data-nome="${p.nome_produto.toLowerCase()}" data-cat="${p.categoria.toLowerCase()}">
       <td><strong>${p.sku}</strong></td>
@@ -780,6 +777,7 @@ function renderizarCatalogoHibrido(produtos) {
     </tr>
   `).join('');
 }
+
 
 // Lembre-se de alterar a linha de renderização dentro da sua função conectarNodoRegional() atual:
 // Troque a montagem antiga da tabela por: renderizarCatalogoHibrido(dadosHttp.dados);
