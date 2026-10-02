@@ -186,121 +186,129 @@
     </nav>
 
     
-    <main>
+<main>
+  
+  <!-- Tela 1: Catálogo Híbrido com Busca e Carrinho Fixo -->
+  <div id="view-catalogo" class="view active">
+    <div class="catalogo-grid">
       
-<div id="view-catalogo" class="view active">
-  <div class="catalogo-grid">
-    <div class="catalogo-corpo-esquerda">
-      <div class="catalogo-topo-fixo">
-        <h2>Catálogo de Itens Regional</h2>
-        <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
-        <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+      <!-- Coluna Esquerda: Filtro e Tabela -->
+      <div class="catalogo-corpo-esquerda">
+        <div class="catalogo-topo-fixo">
+          <h2>Catálogo de Itens Regional</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+          <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+        </div>
+        
+        <div class="catalogo-tabela-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th>Disponível</th>
+                <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+              </tr>
+            </thead>
+            <tbody id="lista-produtos">
+              <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para conectar o banco...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="catalogo-tabela-scroll">
+
+      <!-- Coluna Direita: Gaveta do Carrinho Virtual -->
+      <div class="carrinho-drawer">
+        <div>
+          <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO</h3>
+          <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">Carrinho vazio.</div>
+          <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;"></ul>
+        </div>
+        <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
+            <span>Total:</span><span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
+          </div>
+          <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tela 2: Importação Lote CSV -->
+  <div id="view-upload" class="view">
+    <h2>Importação de Lote Técnico (CSV)</h2>
+    <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+      Clique para carregar ou solte o arquivo .CSV aqui
+      <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="lerArquivoCSV(this)">
+    </div>
+    <div id="consoleOut" class="console" style="display:none"></div>
+  </div>
+
+  <!-- Tela 3: Módulo do Operador (Separação Fila Ativa) -->
+  <div id="view-separacao" class="view">
+    <div class="tabela-operacional-wrapper">
+      <div class="tabela-operacional-topo">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2>Fila Ativa de Separação e Picking</h2>
+            <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+          </div>
+          <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
+        </div>
+      </div>
+      <div class="tabela-operacional-scroll">
         <table>
           <thead>
             <tr>
-              <th>SKU</th>
-              <th>Produto</th>
-              <th>Categoria</th>
-              <th>Disponível</th>
-              <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+              <th>ID Pedido</th>
+              <th>Solicitante</th>
+              <th>Horário</th>
+              <th>Status</th>
+              <th>Ações Operacionais</th>
             </tr>
           </thead>
-          <tbody id="lista-produtos">
-            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para conectar o banco...</td></tr>
+          <tbody id="fila-picking-corpo">
+            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-    <div class="carrinho-drawer">
-      <div>
-        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO</h3>
-        <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">Carrinho vazio.</div>
-        <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;"></ul>
-      </div>
-      <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
-        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
-          <span>Total:</span><span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
+  </div>
+
+  <!-- Tela 4: Módulo Contábil (Faturamento e Expedição RPA) -->
+  <div id="view-faturamento" class="view">
+    <div class="tabela-operacional-wrapper">
+      <div class="tabela-operacional-topo">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2>Painel de Expedição e Faturamento (RPA)</h2>
+            <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+          </div>
+          <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
         </div>
-        <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
+      </div>
+      <div class="tabela-operacional-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>ID Pedido</th>
+              <th>Solicitante</th>
+              <th>Status Atual</th>
+              <th>Código de Rastreio / Nota</th>
+              <th>Ação de Fechamento</th>
+            </tr>
+          </thead>
+          <tbody id="fila-expedicao-corpo">
+            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-</div>
 
-      <!-- Tela: Upload CSV -->
-      <div id="view-upload" class="view">
-        <h2>Importação de Lote Técnico (CSV)</h2>
-        <div class="dropzone" onclick="document.getElementById('fileInput').click()">
-          Clique para carregar ou solte o arquivo .CSV aqui
-          <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="lerArquivoCSV(this)">
-        </div>
-        <div id="consoleOut" class="console" style="display:none"></div>
-      </div>
-    </main>
-  </div>
-
-<div id="view-separacao" class="view">
-  <div class="tabela-operacional-wrapper">
-    <div class="tabela-operacional-topo">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h2>Fila Ativa de Separação e Picking</h2>
-          <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
-        </div>
-        <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
-      </div>
-    </div>
-    <div class="tabela-operacional-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>ID Pedido</th>
-            <th>Solicitante</th>
-            <th>Horário</th>
-            <th>Status</th>
-            <th>Ações Operacionais</th>
-          </tr>
-        </thead>
-        <tbody id="fila-picking-corpo">
-          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<div id="view-faturamento" class="view">
-  <div class="tabela-operacional-wrapper">
-    <div class="tabela-operacional-topo">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h2>Painel de Expedição e Faturamento (RPA)</h2>
-          <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
-        </div>
-        <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
-      </div>
-    </div>
-    <div class="tabela-operacional-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>ID Pedido</th>
-            <th>Solicitante</th>
-            <th>Status Atual</th>
-            <th>Código de Rastreio / Nota</th>
-            <th>Ação de Fechamento</th>
-          </tr>
-        </thead>
-        <tbody id="fila-expedicao-corpo">
-          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
+</main>
 
   
 <script>
@@ -310,103 +318,419 @@
     RJ: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec"
   };
 
+
   const AppState = {
     uf: "",
     apiUrl: "",
     usuario: "operador.teste@aloca.com",
-    segmento: "uniforme" // Segmento vinculado ao perfil do usuário
+    segmento: "uniforme",
+    carrinho: [],
+    produtosBackup: []
   };
 
   /**
    * 1. Sistema de Navegação SPA Blindado
    */
-function navegar(id, elementoClicado) {
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-  document.querySelectorAll(".nav-link").forEach(n => n.classList.remove("active"));
-  
-  const telaAlvo = document.getElementById(`view-${id}`);
-  if (telaAlvo) {
-    telaAlvo.classList.add("active");
-  } else {
-    console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
-  }
-  
-  if (elementoClicado) {
-    elementoClicado.classList.add("active");
-  }
- 
-  // GATILHOS ATUALIZADOS COM OS NOMES CURTOS:
-  if (id === "faturamento") {
-    carregarFilaExpedicao();
-  }
-  if (id === "separacao") {
-    buscarPedidosHoje();
-  }    
-}
+  function navegar(id, elementoClicado) {
+    // Remove o estado ativo de todas as telas e botões
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.querySelectorAll(".nav-link").forEach(n => n.classList.remove("active"));
+    
+    // Ativa a tela clicada
+    const telaAlvo = document.getElementById(`view-${id}`);
+    if (telaAlvo) {
+      telaAlvo.classList.add("active");
+    } else {
+      console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
+    }
+    
+    // Ativa o visual do botão no menu lateral
+    if (elementoClicado) {
+      elementoClicado.classList.add("active");
+    }
 
-
-
-// ISSO VAI NO SCRIPT DO SEU INDEX.HTML (GITHUB)
-async function conectarNodoRegional() {
-  AppState.uf = document.getElementById("ufSelector").value;
-  AppState.apiUrl = EndpointsUFs[AppState.uf] || "";
-  
-  const tabela = document.getElementById("lista-produtos");
-  if (!AppState.apiUrl) {
-    tabela.innerHTML = `<tr><td colspan="6" style="color:var(--text-muted)">Nenhuma UF selecionada.</td></tr>`;
-    return;
+    // GATILHOS DE ATUALIZAÇÃO AUTOMÁTICA DE ROTAS
+    if (id === "faturamento") carregarFilaExpedicao();
+    if (id === "separacao") buscarPedidosHoje();
   }
 
-  tabela.innerHTML = `<tr><td colspan="6" style="color:var(--accent)">Buscando dados via API Gateway do Google...</td></tr>`;
+  /**
+   * 2. Conector de Rede HTTP Gateway (Com Motor de 3 Tentativas)
+   */
+  async function conectarNodoRegional() {
+    AppState.uf = document.getElementById("ufSelector").value;
+    AppState.apiUrl = EndpointsUFs[AppState.uf] || "";
+    const tabela = document.getElementById("lista-produtos");
+    
+    if (!AppState.apiUrl) {
+      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center; padding:2rem;">Nenhuma UF selecionada.</td></tr>`;
+      return;
+    }
+    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--accent); text-align:center; padding:2rem;">Buscando dados via API Gateway do Google...</td></tr>`;
+    
+    const maxTentativas = 3;
+    let tentativaAtual = 0;
+    let sucesso = false;
+    let dadosHttp = null;
 
-  const maxTentativas = 3;
-  let tentativaAtual = 0;
-  let sucesso = false;
-  let dadosHttp = null;
-
-  while (tentativaAtual < maxTentativas && !sucesso) {
-    try {
-      tentativaAtual++;
-      if (tentativaAtual > 1) {
-        tabela.innerHTML = `<tr><td colspan="6" style="color: #eab308;">⚠️ Instabilidade na rede. Re-tentando conexão (${tentativaAtual}/${maxTentativas})...</td></tr>`;
-        await new Promise(resolve => setTimeout(resolve, 800));
+    while (tentativaAtual < maxTentativas && !sucesso) {
+      try {
+        tentativaAtual++;
+        const resposta = await fetch(AppState.apiUrl, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ acao: "BUSCAR_CATALOGO", segmento: AppState.segmento })
+        });
+        if (resposta.ok) {
+          dadosHttp = await resposta.json();
+          sucesso = true;
+        }
+      } catch (err) {
+        console.warn(`[Rede] Falha na tentativa ${tentativaAtual}:`, err.message);
       }
+    }
 
-      const resposta = await fetch(AppState.apiUrl, {
-        method: "POST",
-        mode: "cors", 
-        redirect: "follow", 
-        headers: { "Content-Type": "text/plain" }, 
-        body: JSON.stringify({ acao: "BUSCAR_CATALOGO", segmento: AppState.segmento })
-      });
-
-      if (resposta.ok) {
-        dadosHttp = await resposta.json();
-        sucesso = true;
-      }
-    } catch (err) {
-      console.warn(`[Rede] Falha na tentativa ${tentativaAtual}:`, err.message);
+    if (sucesso && dadosHttp && dadosHttp.sucesso) {
+      // Chama o renderizador híbrido que vamos colocar no próximo chat
+      renderizarCatalogoHibrido(dadosHttp.dados);
+    } else {
+      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente re-selecionar a UF.</td></tr>`;
     }
   }
 
-  // AJUSTE CIRÚRGICO DA LIQUIDACAO DE DADOS:
-  if (sucesso && dadosHttp && dadosHttp.sucesso) {
-    if (dadosHttp.dados.length === 0) {
-      tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
+    /**
+   * 3. Renderização Dinâmica do Catálogo com Atributos de Busca
+   */
+  function renderizarCatalogoHibrido(produtos) {
+    const tabela = document.getElementById("lista-produtos");
+    AppState.produtosBackup = produtos;
+    
+    if (produtos.length === 0) {
+      tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro encontrado para este segmento.</td></tr>`;
       return;
     }
     
-    // GATILHO ATUALIZADO: Passa o bloco para a engine híbrida injetar os seletores de busca e inputs do carrinho
-    renderizarCatalogoHibrido(dadosHttp.dados);
-    
-  } else {
-    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente atualizar a página ou selecione a UF novamente.</td></tr>`;
+    tabela.innerHTML = produtos.map(p => `
+      <tr class="item-produto-linha" data-sku="${p.sku}" data-nome="${p.nome_produto.toLowerCase()}" data-cat="${p.categoria.toLowerCase()}">
+        <td><strong>${p.sku}</strong></td>
+        <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
+        <td><span class="badge" style="background: #f3f4f6; padding: 0.2rem 0.4rem; font-size: 0.75rem;">${p.categoria}</span></td>
+        <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
+        <td>
+          <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+            <input type="number" id="input_qtd_${p.sku}" min="1" max="${p.saldo_disponivel}" value="1" style="width: 60px; padding: 0.3rem; text-align: center;">
+            <button onclick="adicionarAoCarrinho('${p.sku}')" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">+</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
   }
-}
 
+  /**
+   * 4. Filtro de Busca Instantâneo por Digitação (oninput)
+   */
+  function filtrarTabelaCatalogo() {
+    const termo = document.getElementById("buscaInput").value.trim().toLowerCase();
+    document.querySelectorAll(".item-produto-linha").forEach(linha => {
+      const sku = linha.getAttribute("data-sku").toLowerCase();
+      const nome = linha.getAttribute("data-nome");
+      const cat = linha.getAttribute("data-cat");
+      
+      if (sku.includes(termo) || nome.includes(termo) || cat.includes(termo)) {
+        linha.style.display = "";
+      } else {
+        linha.style.display = "none";
+      }
+    });
+  }
 
+  /**
+   * 5. Motores de Gerenciamento do Carrinho Virtual e Interface
+   */
+  function adicionarAoCarrinho(sku) {
+    const produto = AppState.produtosBackup.find(p => p.sku === sku);
+    const inputQtd = document.getElementById(`input_qtd_${sku}`);
+    const qtdDesejada = parseInt(inputQtd ? inputQtd.value : 1, 10);
+    
+    if (!produto || isNaN(qtdDesejada) || qtdDesejada <= 0) return;
+    if (qtdDesejada > produto.saldo_disponivel) {
+      alert(`Estoque insuficiente! O saldo disponível para o SKU ${sku} é de ${produto.saldo_disponivel} un.`);
+      return;
+    }
 
-function lerArquivoCSV(input) {
+    const itemExistente = AppState.carrinho.find(item => item.sku === sku);
+    if (itemExistente) {
+      const novaQtd = itemExistente.quantidade + qtdDesejada;
+      if (novaQtd > produto.saldo_disponivel) {
+        alert(`A soma das quantidades excede o saldo disponível de ${produto.saldo_disponivel} un.`);
+        return;
+      }
+      itemExistente.quantidade = novaQtd;
+    } else {
+      AppState.carrinho.push({ sku: sku, nome: produto.nome_produto, quantidade: qtdDesejada });
+    }
+    
+    atualizarInterfaceCarrinho();
+    dispararToastNotificacao(sku, produto.nome_produto, qtdDesejada);
+  }
+
+  function removerDoCarrinho(sku) {
+    AppState.carrinho = AppState.carrinho.filter(item => item.sku !== sku);
+    atualizarInterfaceCarrinho();
+  }
+
+  function atualizarInterfaceCarrinho() {
+    const vazioDiv = document.getElementById("carrinho-vazio");
+    const listaUl = document.getElementById("carrinho-lista");
+    const acoesDiv = document.getElementById("carrinho-acoes");
+    const totalSpan = document.getElementById("carrinho-total-qtd");
+    
+    if (AppState.carrinho.length === 0) {
+      vazioDiv.style.display = "block"; 
+      listaUl.style.display = "none"; 
+      acoesDiv.style.display = "none"; 
+      return;
+    }
+    vazioDiv.style.display = "none"; 
+    listaUl.style.display = "block"; 
+    acoesDiv.style.display = "block";
+    
+    let totalGeral = 0;
+    listaUl.innerHTML = AppState.carrinho.map(item => {
+      totalGeral += item.quantidade;
+      return `
+        <li style="display: flex; justify-content: space-between; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem;">
+          <div><strong>${item.sku}</strong><br><span style="color: var(--text-muted);">${item.nome}</span></div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span style="font-weight: bold; color: var(--accent);">${item.quantidade}x</span>
+            <button onclick="removerDoCarrinho('${item.sku}')" style="background: none; color: var(--error); border: none; padding: 0; cursor: pointer;">✕</button>
+          </div>
+        </li>`;
+    }).join('');
+    totalSpan.innerHTML = `${totalGeral} un`;
+  }
+
+    /**
+   * 6. Envio Transacional do Lote Manual (All-or-Nothing)
+   */
+  async function finalizarPedidoManual(btn) {
+    if (AppState.carrinho.length === 0) return;
+    if (!confirm("Confirma o fechamento deste pedido manual e o envio para a fila de picking?")) return;
+    btn.disabled = true; 
+    btn.innerHTML = "⏳ Enviando Pedido...";
+
+    try {
+      const resposta = await fetch(AppState.apiUrl, {
+        method: "POST", 
+        mode: "cors", 
+        redirect: "follow", 
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ 
+          acao: "CRIAR_PEDIDO", 
+          usuario: AppState.usuario, 
+          itens: AppState.carrinho.map(it => ({ sku: it.sku, quantidade: it.quantidade })) 
+        })
+      });
+      const resJson = await resposta.json();
+      if (resJson.sucesso) {
+        alert(`[SUCESSO] ${resJson.mensagem}`); 
+        AppState.carrinho = []; 
+        atualizarInterfaceCarrinho(); 
+        conectarNodoRegional();
+      } else {
+        alert(`[REJEITADO] ${resJson.mensagem}`); 
+        btn.disabled = false; 
+        btn.innerHTML = "🚀 Finalizar Pedido";
+      }
+    } catch (err) { 
+      alert("Erro de comunicação ao enviar pedido manual."); 
+      btn.disabled = false; 
+      btn.innerHTML = "🚀 Finalizar Pedido"; 
+    }
+  }
+
+  /**
+   * 7. Feedback de Inclusão via Toast Nu-Style Flutuante
+   */
+  function dispararToastNotificacao(sku, nomeItem, quantidade) {
+    const toastAntigo = document.getElementById("aloca-toast-ativo"); 
+    if (toastAntigo) toastAntigo.remove();
+    
+    const toast = document.createElement("div"); 
+    toast.id = "aloca-toast-ativo"; 
+    toast.className = "toast-container";
+    toast.innerHTML = `<span>💜</span><div><strong>+${quantidade} un</strong> de ${sku}<br><span style="color: #a78bfa; font-size:0.75rem;">${nomeItem.substring(0, 32)}...</span></div>`;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => { if (toast) { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 300); } }, 3500);
+  }
+
+  /**
+   * 8. Módulo do Operador: Consultas e Transições da Fila de Separação
+   */
+  async function buscarPedidosHoje() {
+    const corpoFila = document.getElementById("fila-picking-corpo"); 
+    if (!AppState.apiUrl) return;
+    try {
+      const resposta = await fetch(AppState.apiUrl, { 
+        method: "POST", 
+        headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" }) 
+      });
+      const dadosHttp = await resposta.json();
+      if (dadosHttp.sucesso) {
+        if (dadosHttp.dados.length === 0) { 
+          corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding:2rem;">Nenhum pedido pendente hoje.</td></tr>`; 
+          return; 
+        }
+        corpoFila.innerHTML = dadosHttp.dados.map(p => {
+          let botaoAcaoHtml = p.status === "Em Separação" 
+            ? `<button disabled style="background:#f3f4f6; color:var(--text-muted); border:1px solid var(--border); cursor:not-allowed; opacity:0.7;">🔒 Em Separação</button>` 
+            : `<button onclick="dispararOndaPicking('${p.id_pedido}', this)">Extrair Pedido</button>`;
+          return `
+            <tr>
+              <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
+              <td>${p.usuario || "Regional"}</td>
+              <td>Acompanhar h</td>
+              <td><span>${p.status}</span></td>
+              <td>${botaoAcaoHtml}</td>
+            </tr>`;
+        }).join('');
+      }
+    } catch (err) { console.error(err); }
+  }
+
+  async function dispararOndaPicking(idPedido, btn) {
+    if (!confirm(`Deseja extrair o pedido ${idPedido}?`)) return;
+    btn.disabled = true; 
+    btn.innerHTML = "⏳ Processando...";
+    try {
+      const resposta = await fetch(AppState.apiUrl, { 
+        method: "POST", 
+        mode: "cors", 
+        redirect: "follow", 
+        headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ acao: "MUDAR_STATUS_OPERADOR", subAcao: "EXTRAIR_PARA_SEPARACAO", idPedido: idPedido, usuario: AppState.usuario }) 
+      });
+      const resJson = await resposta.json();
+      if (resJson.sucesso) { 
+        alert(resJson.mensagem); 
+        buscarPedidosHoje(); 
+      }
+    } catch (err) { 
+      alert("Erro ao extrair."); 
+      btn.disabled = false; 
+      btn.innerHTML = "Extrair Pedido"; 
+    }
+  }
+
+  /**
+   * 9. Módulo Contábil: Faturamento e Despacho RPA
+   */
+  async function carregarFilaExpedicao() {
+    const corpoExpedicao = document.getElementById("fila-expedicao-corpo"); 
+    if (!AppState.apiUrl) return;
+    try {
+      const resposta = await fetch(AppState.apiUrl, { 
+        method: "POST", 
+        mode: "cors", 
+        redirect: "follow", 
+        headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_PARA_FATURAMENTO" }) 
+      });
+      const dadosHttp = await resposta.json();
+      if (dadosHttp.sucesso) {
+        if (dadosHttp.dados.length === 0) { 
+          corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding:2rem;">Nenhum faturamento retido hoje.</td></tr>`; 
+          return; 
+        }
+        corpoExpedicao.innerHTML = dadosHttp.dados.map(p => `
+          <tr>
+            <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color:var(--accent); font-weight:bold; text-decoration: underline;">${p.id_pedido}</a></td>
+            <td>${p.usuario || "Regional"}</td>
+            <td><span>${p.status}</span></td>
+            <td><input type="text" id="rastreio_${p.id_pedido}" placeholder="Cód. Rastreio" style="width:100%; padding:0.3rem; border:1px solid var(--border); outline:none;"></td>
+            <td><button onclick="finalizarLoteContabil('${p.id_pedido}', this)">Despachar Lote</button></td>
+          </tr>`).join('');
+      }
+    } catch (err) { console.error(err); }
+  }
+
+  async function finalizarLoteContabil(idPedido, botao) {
+    const codigoRastreio = document.getElementById(`rastreio_${idPedido}`).value.trim();
+    if (!codigoRastreio) { alert("Informe o código de rastreio para compliance."); return; }
+    botao.disabled = true; 
+    botao.innerHTML = "⏳ Baixando...";
+    try {
+      const resposta = await fetch(AppState.apiUrl, { 
+        method: "POST", 
+        mode: "cors", 
+        redirect: "follow", 
+        headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ acao: "MUDAR_STATUS_OPERADOR", subAcao: "CONFIRMAR_EXPEDICAO", idPedido: idPedido, rastreio: codigoRastreio, usuario: AppState.usuario }) 
+      });
+      const resJson = await resposta.json();
+      if (resJson.sucesso) { 
+        alert(resJson.mensagem); 
+        carregarFilaExpedicao(); 
+      }
+    } catch (err) { 
+      alert("Erro de comunicação."); 
+      botao.disabled = false; 
+      botao.innerHTML = "Despachar Lote"; 
+    }
+  }
+
+  /**
+   * 10. Modal Avançado de Detalhes Relacionais (JOIN)
+   */
+  async function abrirModalDetalhes(idPedido) {
+    const modal = document.getElementById("modalDetalhes");
+    const titulo = document.getElementById("modal-titulo");
+    const carregando = document.getElementById("modal-carregando");
+    const tabela = document.getElementById("modal-tabela");
+    const corpoItens = document.getElementById("modal-corpo-itens");
+    
+    modal.style.display = "flex"; 
+    titulo.innerHTML = `// PEDIDO: ${idPedido}`;
+    carregando.style.display = "block"; 
+    tabela.style.display = "none"; 
+    corpoItens.innerHTML = "";
+    
+    try {
+      const resposta = await fetch(AppState.apiUrl, { 
+        method: "POST", 
+        mode: "cors", 
+        redirect: "follow", 
+        headers: { "Content-Type": "text/plain" }, 
+        body: JSON.stringify({ acao: "OBTER_DETALHES_PEDIDO", idPedido: idPedido }) 
+      });
+      const resJson = await resposta.json();
+      carregando.style.display = "none";
+      if (resJson.sucesso) {
+        tabela.style.display = "table";
+        corpoItens.innerHTML = resJson.dados.map(item => `
+          <tr>
+            <td><strong>${item.sku}</strong></td>
+            <td><span style="font-size: 0.9rem; font-weight: 500;">${item.nome}</span></td>
+            <td style="font-weight: bold; color: var(--accent); text-align: right;">${item.quantidade} un</td>
+          </tr>`).join('');
+      } else { 
+        corpoItens.innerHTML = `<tr><td colspan="3" style="color: var(--error);">Erro: ${resJson.mensagem}</td></tr>`; 
+        tabela.style.display = "table"; 
+      }
+    } catch (err) { 
+      carregando.style.display = "none"; 
+      tabela.style.display = "table"; 
+      corpoItens.innerHTML = `<tr><td colspan="3" style="color: var(--error);">Falha crítica de rede.</td></tr>`; 
+    }
+  }
+
+  function fecharModalDetalhes() { document.getElementById("modalDetalhes").style.display = "none"; }
+
+  function lerArquivoCSV(input) {
   const consoleOut = document.getElementById("consoleOut");
   consoleOut.style.display = "block";
   
@@ -419,7 +743,7 @@ function lerArquivoCSV(input) {
   consoleOut.innerHTML = `> Arquivo interceptado: ${arquivo.name}\n`;
 
   if (!AppState.apiUrl) {
-    consoleOut.innerHTML += `[ERRO CRÍTICO] Selecione a UF no cabeçalho antes de rodar o lote.\n`;
+    consoleOut.innerHTML += `<span style="color: var(--error);">[ERRO CRÍTICO] Selecione a UF no cabeçalho antes de rodar o lote.</span>\n`;
     return;
   }
 
@@ -431,10 +755,9 @@ function lerArquivoCSV(input) {
     let itens = [];
     let errosSintaxe = [];
 
-    // INTELEGÊNCIA DE AUTO-DETECÇÃO DE SEPARADOR
-    // Analisa a linha do cabeçalho para descobrir o caractere divisor real do arquivo
+    // AUTO-DETECÇÃO DE SEPARADOR REGIONAL
     const primeiraLinha = linhasRaw[0] ? linhasRaw[0].trim() : "";
-    let separador = ","; // Padrão convencional
+    let separador = ","; 
     
     if (primeiraLinha.includes(";")) {
       separador = ";";
@@ -442,10 +765,10 @@ function lerArquivoCSV(input) {
     
     consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
 
-    // Inicializa a varredura a partir da linha 1 (pulando cabeçalhos)
+    // Processamento a partir da linha 1 (pula cabeçalho)
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
-      if (!linhaLimpa) continue; // Descarta linhas nulas residuais de fim de arquivo
+      if (!linhaLimpa) continue; 
 
       const cols = linhaLimpa.split(separador);
       
@@ -461,7 +784,7 @@ function lerArquivoCSV(input) {
           continue;
         }
 
-        itens.push({ sku: skuLimpo, quantity: qtdLimpa }); // Correção de chave do objeto de payload
+        itens.push({ sku: skuLimpo, quantidade: qtdLimpa });
       } else {
         errosSintaxe.push(`Linha ${i + 1}: Erro de leitura estrutural na linha. Verifique os dados.`);
       }
@@ -479,595 +802,41 @@ function lerArquivoCSV(input) {
 
     consoleOut.innerHTML += `> Lote sanitizado com sucesso. Enviando ${itens.length} itens de forma atômica para o banco distribuído...\n`;
     
-    // Alinhamento exato com o backend: o objeto espera a propriedade exata 'itens' mapeada
     const payloadEnvio = {
       acao: "CRIAR_PEDIDO",
       usuario: AppState.usuario,
-      itens: itens.map(it => ({ sku: it.sku, quantidade: it.quantity }))
+      itens: itens
     };
 
     try {
       const resposta = await fetch(AppState.apiUrl, {
         method: "POST",
+        mode: "cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payloadEnvio)
       });
       
-      // CONFIGURAÇÃO CORRIGIDA E LIMPA:
       const resJson = await resposta.json();
 
       if (resJson.sucesso) {
         consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">[SUCESSO] ${resJson.mensagem}</span>`;
         if (typeof conectarNodoRegional === "function") {
-          conectarNodoRegional(); // Atualiza a tabela de saldos automaticamente
+          conectarNodoRegional(); 
         }
       } else {
         consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[REJEITADO PELO BANCO DE DADOS]</span>\n${resJson.mensagem}\n`;
         if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
       }
     } catch (err) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE LEITURA] Falha ao processar o retorno do servidor. Verifique o console (F12).</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor não respondeu. Certifique-se de que a API está ativa.</span>`;
+      console.error("[CSV Upload Error]", err);
     }
   };
   
   leitor.readAsText(arquivo);
 }
 
-/**
- * MÓDULO 2: Consultas e Transições de Estado do Operador Logístico
- */
-
-// 1. Busca os pedidos filtrados estritamente pela data atual
-async function buscarPedidosHoje() {
-  const corpoFila = document.getElementById("fila-picking-corpo");
-  
-  if (!AppState.apiUrl) {
-    corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Selecione uma UF ativa no cabeçalho.</td></tr>`;
-    return;
-  }
-
-  corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--accent)">Extraindo fila diária de picking via API Gateway...</td></tr>`;
-
-  try {
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" })
-    });
-    const dadosHttp = await resposta.json();
-
-    if (dadosHttp.sucesso) {
-      if (dadosHttp.dados.length === 0) {
-        corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); padding: 2rem; text-align: center;">Nenhum pedido pendente gerado na data de hoje para esta UF.</td></tr>`;
-        return;
-      }
-
-      corpoFila.innerHTML = dadosHttp.dados.map(p => {
-        let horaFormatada = "--:--";
-        if (p.timestamp_criacao) {
-          try {
-            const d = new Date(p.timestamp_criacao);
-            if (!isNaN(d.getTime())) {
-              horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            } else {
-              const correspondenciaHora = p.timestamp_criacao.match(/\d{2}:\d{2}/);
-              if (correspondenciaHora) horaFormatada = correspondenciaHora;
-            }
-          } catch(err) {
-            horaFormatada = "--:--";
-          }
-        }
-
-        // APLICANDO A BARREIRA VISUAL DE STATUS (UX REGRA CRÍTICA)
-        let botaoAcaoHtml = "";
-        
-        if (p.status === "Em Separação") {
-          // Se já está em separação, renderiza um botão travado em estilo "Inativo/Disabled"
-          botaoAcaoHtml = `
-            <button disabled style="
-              padding: 0.4rem 0.8rem; 
-              font-size: 0.85rem; 
-              background: #f3f4f6; 
-              color: var(--text-muted); 
-              border: 1px solid var(--border); 
-              cursor: not-allowed; 
-              opacity: 0.7;
-            ">🔒 Em Separação</button>
-          `;
-        } else {
-          // Se ainda estiver pendente (Aguardando Separação), renderiza o botão normal ativo
-          botaoAcaoHtml = `
-            <button onclick="dispararOndaPicking('${p.id_pedido}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Extrair Pedido</button>
-          `;
-        }
-
-        return `
-          <tr>
-            <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline; cursor: pointer;">${p.id_pedido}</a></td>
-            <td>${p.usuario || "Regional"}</td>
-            <td>${horaFormatada} h</td>
-            <td><span class="badge" style="background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
-            <!-- Injeta dinamicamente o botão com a trava de segurança aplicada -->
-            <td>${botaoAcaoHtml}</td>
-          </tr>
-        `;
-      }).join('');
-    } else {
-      corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Erro do Servidor: ${dadosHttp.mensagem}</td></tr>`;
-    }
-  } catch (err) {
-    corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Falha crítica de comunicação com o nó de rede da UF.</td></tr>`;
-  }
-}
-
-// 2. Dispara a transição atômica para "Em Separação" com Motor de Retry Automático
-async function dispararOndaPicking(idPedido, botaoElemento) {
-  if (!confirm(`Deseja gerar o corte e mover o pedido ${idPedido} para "Em Separação"?`)) return;
-
-  const btn = botaoElemento || event.target;
-  
-  // Trava o botão para impedir cliques múltiplos destrutivos
-  btn.disabled = true;
-  btn.style.opacity = "0.6";
-  btn.style.cursor = "not-allowed";
-
-  // Configuração da esteira de resiliência
-  const maxTentativas = 3;
-  let tentativaAtual = 0;
-  let sucessoTransacao = false;
-  let resultadoJson = null;
-
-  while (tentativaAtual < maxTentativas && !sucessoTransacao) {
-    try {
-      tentativaAtual++;
-      
-      if (tentativaAtual === 1) {
-        btn.innerHTML = "⏳ [1/4] Conectando API...";
-      } else {
-        btn.innerHTML = `⚠️ Re-tentando [${tentativaAtual}/${maxTentativas}]...`;
-        // Aguarda 1 segundo completo para dar tempo do servidor limpar travas antigas de memória
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      const resposta = await fetch(AppState.apiUrl, {
-        method: "POST",
-        mode: "cors",
-        redirect: "follow", // Força o navegador a perseguir o redirecionamento 302 do Google
-        headers: {
-          "Content-Type": "text/plain" // Mantido text/plain estrito para evitar pre-flight OPTIONS requests
-        },
-        body: JSON.stringify({
-          acao: "MUDAR_STATUS_OPERADOR",
-          subAcao: "EXTRAIR_PARA_SEPARACAO",
-          idPedido: idPedido,
-          usuario: AppState.usuario
-        })
-      });
-
-      if (resposta.ok) {
-        resultadoJson = await resposta.json();
-        sucessoTransacao = true;
-      } else {
-        console.warn(`[API] Servidor retornou código HTTP ${resposta.status} na tentativa ${tentativaAtual}`);
-      }
-
-    } catch (err) {
-      console.warn(`[Rede] Micro-queda interceptada na tentativa ${tentativaAtual}:`, err.message);
-      // Se caiu aqui devido ao "Failed to fetch", o loop vai tentar novamente até o limite de maxTentativas
-    }
-  }
-
-  // PROCESSAMENTO DO VEREDITO FINAL APÓS AS RETENTATIVAS
-  if (sucessoTransacao && resultadoJson) {
-    btn.innerHTML = "⚙️ [3/4] Gravando Banco...";
-    
-    if (resultadoJson.sucesso) {
-      btn.innerHTML = "✅ [4/4] Concluído!";
-      setTimeout(() => {
-        alert(`[ONDA INICIADA] ${resultadoJson.mensagem}`);
-        try {
-          buscarPedidosHoje(); 
-        } catch (errRender) {
-          console.warn("[Aloca WEB] Falha ao re-renderizar lista:", errRender);
-        }
-      }, 300);
-    } else {
-      btn.innerHTML = "❌ Rejeitado";
-      btn.style.background = "var(--error)";
-      btn.style.color = "#fff";
-      alert(`[ERRO TRANSACIONAL] ${resultadoJson.mensagem}`);
-      resetarBotaoEstadoOriginal(btn);
-    }
-  } else {
-    // Se estourar todas as 3 tentativas sem conseguir resposta limpa do Google
-    btn.innerHTML = "⚠️ Falha de Conexão";
-    btn.style.background = "var(--error)";
-    btn.style.color = "#fff";
-    alert("Erro de comunicação ao processar transição de status após múltiplas tentativas. Verifique a planilha.");
-    resetarBotaoEstadoOriginal(btn);
-  }
-}
-
-// Função auxiliar para restaurar a usabilidade do botão em caso de falhas
-function resetarBotaoEstadoOriginal(btn) {
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.style.opacity = "1";
-    btn.style.cursor = "pointer";
-    btn.style.background = "";
-    btn.innerHTML = "Extrair Pedido";
-  }, 3000);
-}
-
-  /**
- * MÓDULO 3: Ações de Liquidação de Lote e Fechamento Contábil
- */
-
-/**
- * MÓDULO 3: Consultas de Expedição e Fechamento Contábil
- */
-
-// 1. Puxa os lotes retidos em processo de separação física (Filtro Diário Otimizado)
-async function carregarFilaExpedicao() {
-  const corpoExpedicao = document.getElementById("fila-expedicao-corpo");
-  if (!AppState.apiUrl) {
-    corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Selecione uma UF ativa no cabeçalho.</td></tr>`;
-    return;
-  }
-
-  corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--accent)">Sincronizando lotes em ondas de picking...</td></tr>`;
-
-  try {
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_PARA_FATURAMENTO" })
-      // body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_EM_SEPARACAO" })
-    });
-    const dadosHttp = await resposta.json();
-
-    if (dadosHttp.sucesso) {
-      if (dadosHttp.dados.length === 0) {
-        corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Nenhum pedido retido em fase de separação nesta UF hoje.</td></tr>`;
-        return;
-      }
-
-      corpoExpedicao.innerHTML = dadosHttp.dados.map(p => `
-        <tr>
-          <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
-          <td>${p.usuario || "Regional"}</td>
-          <td><span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; padding: 0.2rem 0.5rem; font-size: 0.8rem;">${p.status}</span></td>
-          <td>
-            <input type="text" id="rastreio_${p.id_pedido}" placeholder="Cód. Rastreio ou Remessa" style="padding: 0.4rem; font-size: 0.85rem; width: 100%; border: 1px solid var(--border); outline: none;">
-          </td>
-          <td>
-            <button onclick="finalizarLoteContabil('${p.id_pedido}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background:#111827; color:#fff;">Despachar Lote</button>
-          </td>
-        </tr>
-      `).join('');
-    } else {
-      corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Erro do Servidor: ${dadosHttp.mensagem}</td></tr>`;
-    }
-  } catch (err) {
-    corpoExpedicao.innerHTML = `<tr><td colspan="5" style="color:var(--error)">Falha crítica de comunicação com o nó regional de despacho.</td></tr>`;
-  }
-}
-
-// 2. Dispara a baixa definitiva do estoque físico real e remove a cota reservada
-async function finalizarLoteContabil(idPedido, botao) {
-  const inputRastreio = document.getElementById(`rastreio_${idPedido}`);
-  const codigoRastreio = inputRastreio ? inputRastreio.value.trim() : "";
-
-  if (!codigoRastreio) {
-    alert("ERRO DE COMPLIANCE: Informe obrigatoriamente o código de rastreamento ou nota para liberar o lote.");
-    return;
-  }
-
-  botao.disabled = true;
-  botao.innerHTML = "⏳ Atualizando Saldos...";
-
-  try {
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        acao: "MUDAR_STATUS_OPERADOR",
-        subAcao: "CONFIRMAR_EXPEDICAO",
-        idPedido: idPedido,
-        rastreio: codigoRastreio,
-        usuario: AppState.usuario
-      })
-    });
-    const resultado = await resposta.json();
-
-    if (resultado.sucesso) {
-      alert(`[DESPACHADO COM SUCESSO] ${resultado.mensagem}`);
-      carregarFilaExpedicao(); // Limpa e atualiza o painel fiscal na hora
-    } else {
-      alert(`[ERRO TRANSACIONAL] ${resultado.mensagem}`);
-      botao.disabled = false;
-      botao.innerHTML = "Despachar Lote";
-    }
-  } catch (err) {
-    alert("Erro de comunicação ao processar baixa contábil definitiva.");
-    botao.disabled = false;
-    botao.innerHTML = "Despachar Lote";
-  }
-}
-
-
-
-
-/**
- * Abre o modal e busca os itens do pedido via API Fetch
- */
-async function abrirModalDetalhes(idPedido) {
-  const modal = document.getElementById("modalDetalhes");
-  const titulo = document.getElementById("modal-titulo");
-  const carregando = document.getElementById("modal-carregando");
-  const tabela = document.getElementById("modal-tabela");
-  const corpoItens = document.getElementById("modal-corpo-itens");
-
-  // Exibe o modal e reseta o estado interno de carregamento
-  modal.style.display = "flex";
-  titulo.innerHTML = `// PEDIDO: ${idPedido}`;
-  carregando.style.display = "block";
-  tabela.style.display = "none";
-  corpoItens.innerHTML = "";
-
-  try {
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ acao: "OBTER_DETALHES_PEDIDO", idPedido: idPedido })
-    });
-    
-    const resJson = await resposta.json();
-    carregando.style.display = "none";
-
-  // Localize este trecho dentro da função abrirModalDetalhes no seu index.html e substitua:
-  if (resJson.sucesso) {
-    tabela.style.display = "table";
-    corpoItens.innerHTML = resJson.dados.map(item => `
-      <tr>
-        <td><strong>${item.sku}</strong></td>
-        <!-- Nova célula com o nome comercial do produto vindo do catálogo -->
-        <td><span style="font-size: 0.9rem; color: var(--text); font-weight: 500;">${item.nome}</span></td>
-        <td style="font-weight: bold; color: var(--accent); text-align: right;">${item.quantidade} un</td>
-      </tr>
-    `).join('');
-  } else {
-      corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Erro: ${resJson.mensagem}</td></tr>`;
-      tabela.style.display = "table";
-    }
-  } catch (err) {
-    carregando.style.display = "none";
-    tabela.style.display = "table";
-    corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Falha crítica de rede ao conectar à API.</td></tr>`;
-  }
-}
-
-function fecharModalDetalhes() {
-  document.getElementById("modalDetalhes").style.display = "none";
-}
-
-
-
-// Adicione a propriedade 'carrinho' ao seu objeto AppState global
-AppState.carrinho = [];
-AppState.produtosBackup = []; // Guarda a cópia para a busca local ultra-rápida
-
-/**
- * 1. Renderização do Catálogo Estendida (Com Inputs de Quantidade)
- */
-function renderizarCatalogoHibrido(produtos) {
-  const tabela = document.getElementById("lista-produtos");
-  AppState.produtosBackup = produtos; // Alimenta o cache de busca local
-
-  if (produtos.length === 0) {
-    tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro encontrado para este segmento.</td></tr>`;
-    return;
-  }
-
-  // O SEGREDO ESTÁ AQUI: Injeção estrita dos atributos data-sku, data-nome e data-cat
-  tabela.innerHTML = produtos.map(p => `
-    <tr class="item-produto-linha" data-sku="${p.sku}" data-nome="${p.nome_produto.toLowerCase()}" data-cat="${p.categoria.toLowerCase()}">
-      <td><strong>${p.sku}</strong></td>
-      <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
-      <td><span class="badge" style="background: #f3f4f6; padding: 0.2rem 0.4rem; font-size: 0.75rem;">${p.categoria}</span></td>
-      <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
-      <td>
-        <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
-          <input type="number" id="input_qtd_${p.sku}" min="1" max="${p.saldo_disponivel}" value="1" style="width: 60px; padding: 0.3rem; text-align: center;">
-          <button onclick="adicionarAoCarrinho('${p.sku}')" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">+</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-
-// Lembre-se de alterar a linha de renderização dentro da sua função conectarNodoRegional() atual:
-// Troque a montagem antiga da tabela por: renderizarCatalogoHibrido(dadosHttp.dados);
-
-/**
- * 2. Filtro de Busca Dinâmica em Tempo Real (Lado do Cliente - Ultra Instantâneo)
- */
-function filtrarTabelaCatalogo() {
-  const termo = document.getElementById("buscaInput").value.trim().toLowerCase();
-  const linhas = document.querySelectorAll(".item-produto-linha");
-
-  linhas.forEach(linha => {
-    const sku = linha.getAttribute("data-sku").toLowerCase();
-    const nome = linha.getAttribute("data-nome");
-    const cat = linha.getAttribute("data-cat");
-
-    if (sku.includes(termo) || nome.includes(termo) || cat.includes(termo)) {
-      linha.style.display = "";
-    } else {
-      linha.style.display = "none";
-    }
-  });
-}
-
-/**
- * 3. Gerenciamento do Carrinho Virtual
- */
-function adicionarAoCarrinho(sku) {
-  const produto = AppState.produtosBackup.find(p => p.sku === sku);
-  const inputQtd = document.getElementById(`input_qtd_${sku}`);
-  const qtdDesejada = parseInt(inputQtd ? inputQtd.value : 1, 10);
-
-  if (!produto || isNaN(qtdDesejada) || qtdDesejada <= 0) return;
-
-  if (qtdDesejada > produto.saldo_disponivel) {
-    alert(`Estoque insuficiente! O saldo disponível para o SKU ${sku} é de ${produto.saldo_disponivel} un.`);
-    return;
-  }
-
-  // Verifica se o SKU já está no carrinho para apenas somar a quantidade
-  const itemExistente = AppState.carrinho.find(item => item.sku === sku);
-  if (itemExistente) {
-    const novaQtd = itemExistente.quantidade + qtdDesejada;
-    if (novaQtd > produto.saldo_disponivel) {
-      alert(`Aviso: A soma das quantidades no carrinho (${novaQtd}) excede o saldo disponível de ${produto.saldo_disponivel} un.`);
-      return;
-    }
-    itemExistente.quantity = novaQtd; // Alinha chaves
-  } else {
-    AppState.carrinho.push({ sku: sku, nome: produto.nome_produto, quantidade: qtdDesejada });
-  }
-    // Procure o final da sua função adicionarAoCarrinho(sku) e insira:
-    atualizarInterfaceCarrinho();
-    dispararToastNotificacao(sku, produto.nome_produto, qtdDesejada); // Dispara o pop-up invisível moderno!
-}
-
-function removerDoCarrinho(sku) {
-  AppState.carrinho = AppState.carrinho.filter(item => item.sku !== sku);
-  atualizarInterfaceCarrinho();
-}
-
-function atualizarInterfaceCarrinho() {
-  const vazioDiv = document.getElementById("carrinho-vazio");
-  const listaUl = document.getElementById("carrinho-lista");
-  const acoesDiv = document.getElementById("carrinho-acoes");
-  const totalSpan = document.getElementById("carrinho-total-qtd");
-
-  if (AppState.carrinho.length === 0) {
-    vazioDiv.style.display = "block";
-    listaUl.style.display = "none";
-    acoesDiv.style.display = "none";
-    return;
-  }
-
-  vazioDiv.style.display = "none";
-  listaUl.style.display = "block";
-  acoesDiv.style.display = "block";
-
-  let totalGeral = 0;
-
-  listaUl.innerHTML = AppState.carrinho.map(item => {
-    totalGeral += item.quantidade;
-    return `
-      <li style="display: flex; justify-content: space-between; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem;">
-        <div>
-          <strong>${item.sku}</strong><br>
-          <span style="color: var(--text-muted);">${item.nome}</span>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <span style="font-weight: bold; color: var(--accent);">${item.quantidade}x</span>
-          <button onclick="removerDoCarrinho('${item.sku}')" style="background: none; color: var(--error); border: none; padding: 0; cursor: pointer; font-size: 1rem;">✕</button>
-        </div>
-      </li>
-    `;
-  }).join('');
-
-  totalSpan.innerHTML = `${totalGeral} un`;
-}
-
-/**
- * 4. Submissão Transacional do Carrinho Manual (Conecta com a mesma rota do CSV)
- */
-async function finalizarPedidoManual(btn) {
-  if (AppState.carrinho.length === 0) return;
-  if (!confirm("Confirma o fechamento deste pedido manual e o envio para a fila de picking?")) return;
-
-  btn.disabled = true;
-  btn.innerHTML = "⏳ Enviando Pedido...";
-
-  const payloadEnvio = {
-    acao: "CRIAR_PEDIDO",
-    usuario: AppState.usuario,
-    // Mapeia exatamente a chave 'itens' com a nomenclatura que o backend blindado espera
-    itens: AppState.carrinho.map(it => ({ sku: it.sku, quantidade: it.quantidade }))
-  };
-
-  try {
-    const resposta = await fetch(AppState.apiUrl, {
-      method: "POST",
-      mode: "cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(payloadEnvio)
-    });
-    
-    const resJson = await resposta.json();
-
-    if (resJson.sucesso) {
-      alert(`[SUCESSO] ${resJson.mensagem}`);
-      AppState.carrinho = []; // Limpa o carrinho
-      atualizarInterfaceCarrinho();
-      conectarNodoRegional(); // Recarrega o catálogo para abater o saldo disponível na tela
-    } else {
-      alert(`[REJEITADO PELO BANCO] ${resJson.mensagem}`);
-      btn.disabled = false;
-      btn.innerHTML = "🚀 Finalizar Pedido";
-    }
-  } catch (err) {
-    alert("Erro de comunicação ao enviar pedido manual.");
-    btn.disabled = false;
-    btn.innerHTML = "🚀 Finalizar Pedido";
-  }
-}
-
-/**
- * Injeta e exibe um Toast flutuante Nu-Style no canto inferior da tela
- */
-function dispararToastNotificacao(sku, nomeItem, quantidade) {
-  // Remove qualquer Toast anterior ativo para não encavalar notificações
-  const toastAntigo = document.getElementById("aloca-toast-ativo");
-  if (toastAntigo) toastAntigo.remove();
-
-  // Cria a estrutura física do elemento na árvore do navegador (DOM)
-  const toast = document.createElement("div");
-  toast.id = "aloca-toast-ativo";
-  toast.className = "toast-container";
-  
-  // Conteúdo do Toast no padrão Paper-Terminal roxo
-  toast.innerHTML = `
-    <span>💜</span>
-    <div>
-      <strong>+${quantidade} un</strong> de ${sku}<br>
-      <span style="color: #a78bfa; font-size:0.75rem;">${nomeItem.substring(0, 32)}...</span>
-    </div>
-  `;
-
-  document.body.appendChild(toast);
-
-  // Destrói o elemento sozinho após 3.5 segundos (UX Fade Out)
-  setTimeout(() => {
-    if (toast) {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(0.5rem)";
-      toast.style.transition = "all 0.3s ease";
-      setTimeout(() => toast.remove(), 300);
-    }
-  }, 3500);
-}
 
   
 </script>
