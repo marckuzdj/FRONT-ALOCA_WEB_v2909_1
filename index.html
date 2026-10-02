@@ -175,12 +175,13 @@
 
   <div class="layout">
     
-      <nav>
-        <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
-        <button class="nav-link" onclick="navegar('upload', this)">// ENVIAR PEDIDO EM LOTE (CSV)</button>
-        <button class="nav-link" onclick="navegar('operacaoLogistica', this)">// SEPARAÇÃO & PICKING</button>
-        <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
-      </nav>
+    <nav>
+      <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
+      <button class="nav-link" onclick="navegar('upload', this)">// ENVIAR PEDIDO EM LOTE (CSV)</button>
+      <button class="nav-link" onclick="navegar('separacao', this)">// SEPARAÇÃO & PICKING</button>
+      <button class="nav-link" onclick="navegar('faturamento', this)">// FATURAMENTO & RPA</button>
+    </nav>
+
     
     <main>
       
@@ -237,7 +238,7 @@
     </main>
   </div>
 
-<div id="view-operacaoLogistica" class="view">
+<div id="view-separacao" class="view">
   <div class="tabela-operacional-wrapper">
     <div class="tabela-operacional-topo">
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -267,9 +268,7 @@
   </div>
 </div>
 
-
-
-<div id="view-faturamentoRPA" class="view">
+<div id="view-faturamento" class="view">
   <div class="tabela-operacional-wrapper">
     <div class="tabela-operacional-topo">
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -299,6 +298,7 @@
   </div>
 </div>
 
+
   
 <script>
   // Centralização de Endpoints das suas macros do Apps Script por UF
@@ -318,11 +318,9 @@
    * 1. Sistema de Navegação SPA Blindado
    */
 function navegar(id, elementoClicado) {
-  // Remove o estado ativo de todas as telas e links (aspas duplas corrigidas)
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-link").forEach(n => n.classList.remove("active"));
   
-  // Ativa a nova tela correspondente
   const telaAlvo = document.getElementById(`view-${id}`);
   if (telaAlvo) {
     telaAlvo.classList.add("active");
@@ -330,20 +328,19 @@ function navegar(id, elementoClicado) {
     console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
   }
   
-  // Ativa o botão correto usando o parâmetro seguro (this)
   if (elementoClicado) {
     elementoClicado.classList.add("active");
   }
  
-  // Gatilhos automáticos de atualização de dados baseados na navegação
-  if (id === "faturamentoRPA") {
+  // GATILHOS ATUALIZADOS COM OS NOMES CURTOS:
+  if (id === "faturamento") {
     carregarFilaExpedicao();
   }
-  
-  if (id === "operacaoLogistica") {
+  if (id === "separacao") {
     buscarPedidosHoje();
   }    
 }
+
 
 
 // ISSO VAI NO SCRIPT DO SEU INDEX.HTML (GITHUB)
