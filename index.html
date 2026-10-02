@@ -36,10 +36,33 @@
     .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
     .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
     
-    /* 4. Habilita a rolagem interna estrita de cada aba independente */
-    main { background: var(--bg-surface); border: 1px solid var(--border); padding: 2rem; height: 100%; overflow-y: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .view { display: none; }
-    .view.active { display: block; }
+/* Garante que o painel principal se adapte e não corte elementos */
+main { 
+  background: var(--bg-surface); 
+  border: 1px solid var(--border); 
+  padding: 2rem; 
+  height: 100%; 
+  overflow: hidden; /* O scroll agora é controlado INDIVIDUALMENTE por cada tela */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Cada visualização agora é uma esteira vertical independente de 100% da altura */
+.view { 
+  display: none; 
+  height: 100%;
+}
+.view.active { 
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cria um container de rolagem exclusivo para as tabelas das outras telas */
+.tabela-container-scroll {
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding-right: 0.5rem;
+}
     
     table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
     th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
@@ -236,57 +259,71 @@
     </main>
   </div>
 
-  <!-- Tela: Controle Operador (Fila de Separação) -->
+<!-- Tela: Controle Operador (Fila de Separação) -->
 <div id="view-operacaoLogistica" class="view">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <div>
-      <h2>Fila Ativa de Separação e Picking</h2>
-      <p style="color: var(--text-muted);">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+  <!-- TOPO FIXO: Ações e Títulos no topo da esteira -->
+  <div style="flex-shrink: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2>Fila Ativa de Separação e Picking</h2>
+        <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+      </div>
+      <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
     </div>
-    <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
   </div>
   
-  <table>
-    <thead>
-      <tr>
-        <th>ID Pedido</th>
-        <th>Solicitante</th>
-        <th>Horário</th>
-        <th>Status</th>
-        <th>Ações Operacionais</th>
-      </tr>
-    </thead>
-    <tbody id="fila-picking-corpo">
-      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
-    </tbody>
-  </table>
+  <!-- CORPO ROLÁVEL: Apenas a lista de pedidos desliza -->
+  <div class="tabela-container-scroll">
+    <table style="margin-top: 0;">
+      <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
+        <tr>
+          <th>ID Pedido</th>
+          <th>Solicitante</th>
+          <th>Horário</th>
+          <th>Status</th>
+          <th>Ações Operacionais</th>
+        </tr>
+      </thead>
+      <tbody id="fila-picking-corpo">
+        <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
+
 
 <!-- Tela: Despacho e Faturamento RPA (Módulo 3) -->
 <div id="view-faturamentoRPA" class="view">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <div>
-      <h2>Painel de Expedição e Faturamento (RPA)</h2>
-      <p style="color: var(--text-muted);">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+  <!-- TOPO FIXO: Títulos e Filtros fiscais -->
+  <div style="flex-shrink: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2>Painel de Expedição e Faturamento (RPA)</h2>
+        <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+      </div>
+      <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
     </div>
-    <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>ID Pedido</th>
-        <th>Solicitante</th>
-        <th>Status Atual</th>
-        <th>Código de Rastreio / Nota</th>
-        <th>Ação de Fechamento</th>
-      </tr>
-    </thead>
-    <tbody id="fila-expedicao-corpo">
-      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
-    </tbody>
-  </table>
+  <!-- CORPO ROLÁVEL: A listagem de faturamento desliza de forma isolada -->
+  <div class="tabela-container-scroll">
+    <table style="margin-top: 0;">
+      <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
+        <tr>
+          <th>ID Pedido</th>
+          <th>Solicitante</th>
+          <th>Status Atual</th>
+          <th>Código de Rastreio / Nota</th>
+          <th>Ação de Fechamento</th>
+        </tr>
+      </thead>
+      <tbody id="fila-expedicao-corpo">
+        <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
+
 
 
   
