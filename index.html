@@ -5,46 +5,163 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aloca WEB // External Project</title>
   <style>
-      :root {
-        /* Nu-Style Purple & Light Mode Palette */
-        --bg-main: #f8f9fa;
-        --bg-surface: #ffffff;
-        --border: #e4e7eb;
-        --accent: #820ad1;      /* Roxo Nu marcante */
-        --error: #e02424;       /* Vermelho institucional limpo */
-        --text: #111111;        /* Texto principal de alto contraste */
-        --text-muted: #6b7280;  /* Legendas e marcas secundárias */
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', system-ui, sans-serif; }
-      body { background-color: var(--bg-main); color: var(--text); padding: 2rem; }
-      
-      header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); margin-bottom: 2rem; }
-      .logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
-      .logo span { color: var(--accent); }
-      
-      select, input, button { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; outline: none; font-weight: 600; }
-      button { cursor: pointer; background: var(--accent); color: #ffffff; border: none; transition: opacity 0.2s; }
-      button:hover { opacity: 0.9; }
-      
-      .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; }
-      nav { display: flex; flex-direction: column; gap: 0.5rem; }
-      .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
-      .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
-      
-      main { background: var(--bg-surface); border: 1px solid var(--border); padding: 2rem; min-height: 60vh; }
-      .view { display: none; }
-      .view.active { display: block; }
-      
-      table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
-      th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
-      th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-      
-      /* Console "Estilo Documento" elegante e legível */
-      .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
-      .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
-      .dropzone:hover { border-color: var(--accent); color: var(--text); background: #fcfaff; }
+    :root {
+      /* Nu-Style Purple & Light Mode Palette */
+      --bg-main: #f8f9fa;
+      --bg-surface: #ffffff;
+      --border: #e4e7eb;
+      --accent: #820ad1;      /* Roxo Nu marcante */
+      --error: #e02424;       /* Vermelho institucional limpo */
+      --text: #111111;        /* Texto principal de alto contraste */
+      --text-muted: #6b7280;  /* Legendas e marcas secundárias */
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'SF Pro Display', system-ui, sans-serif; }
+    
+    /* 1. Ajuste de altura e overflow para permitir rolagens internas fixas */
+    body { background-color: var(--bg-main); color: var(--text); padding: 2rem; height: 100vh; overflow: hidden; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 2px solid var(--border); margin-bottom: 2rem; }
+    .logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    
+    select, input, button { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; outline: none; font-weight: 600; }
+    button { cursor: pointer; background: var(--accent); color: #ffffff; border: none; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    
+    /* 2. Ajuste de viewport útil para o Grid Principal */
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; height: calc(100vh - 7rem); }
+    
+    /* 3. Trava a barra lateral de navegação no topo útil */
+    nav { display: flex; flex-direction: column; gap: 0.5rem; position: sticky; top: 0; height: fit-content; }
+    .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
+    .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
+    
+    /* Garante que o painel principal se adapte e não corte elementos */
+    main { 
+      background: var(--bg-surface); 
+      border: 1px solid var(--border); 
+      padding: 2rem; 
+      height: 100%; 
+      overflow: hidden; /* O scroll agora é controlado INDIVIDUALMENTE por cada tela */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
 
+    /* 1. Busque a classe .view e .view.active antiga e substitua por esta versão limpa: */
+    .view { 
+      display: none; 
+    }
+    .view.active { 
+      display: block !important; 
+      width: 100%;
+      height: auto; /* Permite que a tela se expanda organicamente sem ser esmagada */
+    }
+    
+    /* 2. Busque a classe .tabela-container-scroll antiga e substitua por esta: */
+    .tabela-container-scroll {
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding-right: 0.5rem;
+      /* Limita o tamanho máximo com base na janela útil do operador, reativando o scroll isolado */
+      max-height: calc(100vh - 15rem); 
+      border-bottom: 1px solid var(--border);
+    }
+
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+    th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
+    
+    /* Força os títulos da tabela a ficarem colados no topo do container de scroll */
+    th { 
+      color: var(--text-muted); 
+      font-size: 0.8rem; 
+      text-transform: uppercase; 
+      position: sticky;
+      top: 0;
+      background-color: var(--bg-surface);
+      z-index: 10;
+      border-bottom: 2px solid var(--border);
+      padding: 1rem;
+    }
+ 
+    /* Console "Estilo Documento" elegante e legível */
+    .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
+    .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
+    .dropzone:hover { border-color: var(--accent); color: var(--text); background: #fcfaff; }
+
+    /* ==========================================================================
+       5. NOVAS CLASSES: Motor de Fixação do Carrinho e Notificações Toast 
+       ========================================================================== */
+    /* Divisão Híbrida do Catálogo: Altura fixa controlada de 100% da aba */
+    .catalogo-grid {
+      display: grid; 
+      grid-template-columns: 1fr 340px; 
+      gap: 2rem; 
+      align-items: start;
+      height: 100%; /* Ocupa toda a altura do main */
+    }
+
+    /* Coluna da Esquerda: Transforma em uma esteira Flex vertical */
+    .catalogo-corpo-esquerda {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 12rem); /* Trava a altura útil para alinhar com o viewport */
+    }
+
+    /* Bloco do Topo: Fica 100% fixo por natureza, sem rolar */
+    .catalogo-topo-fixo {
+      flex-shrink: 0; /* Impede que este bloco encolha */
+      background: var(--bg-surface);
+      padding-bottom: 1rem;
+      z-index: 20;
+    }
+
+    /* Container da Tabela: Recebe a rolagem independente estrita */
+    .catalogo-tabela-scroll {
+      flex-grow: 1;
+      overflow-y: auto; /* A rolagem acontece APENAS aqui dentro */
+      padding-right: 0.5rem;
+    }
+
+    .carrinho-drawer {
+      background: var(--bg-main); 
+      border: 1px solid var(--border); 
+      padding: 1.5rem; 
+      border-radius: 4px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+      position: sticky; 
+      top: 0; 
+      border-top: 4px solid var(--accent);
+      max-height: calc(100vh - 12rem);
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #111111;
+      color: #ffffff;
+      padding: 1rem 1.5rem;
+      border-radius: 4px;
+      border-left: 4px solid var(--accent);
+      font-family: monospace;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      animation: slideInRoxo 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInRoxo {
+      from { transform: translateY(1rem); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
   </style>
+
+
 </head>
 <body>
 
@@ -61,26 +178,56 @@
 
   <div class="layout">
     
-      <nav>
-        <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
-        <button class="nav-link" onclick="navegar('upload', this)">// SUBIR CSV (LOTE)</button>
-        <button class="nav-link" onclick="navegar('operacaoLogistica', this)">// SEPARAÇÃO & PICKING</button>
-        <button class="nav-link" onclick="navegar('faturamentoRPA', this)">// FATURAMENTO & RPA</button>
-      </nav>
+    <nav>
+      <button class="nav-link active" onclick="navegar('catalogo', this)">// VER CATALOGO</button>
+      <button class="nav-link" onclick="navegar('upload', this)">// ENVIAR PEDIDO EM LOTE (CSV)</button>
+      <button class="nav-link" onclick="navegar('separacao', this)">// SEPARAÇÃO & PICKING</button>
+      <button class="nav-link" onclick="navegar('faturamento', this)">// FATURAMENTO & RPA</button>
+    </nav>
+
     
     <main>
-      <!-- Tela: Catálogo -->
-      <div id="view-catalogo" class="view active">
-        <h2>Catálogo de Itens em Tempo Real</h2>
+      
+<div id="view-catalogo" class="view active">
+  <div class="catalogo-grid">
+    <div class="catalogo-corpo-esquerda">
+      <div class="catalogo-topo-fixo">
+        <h2>Catálogo de Itens Regional</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+        <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+      </div>
+      <div class="catalogo-tabela-scroll">
         <table>
           <thead>
-            <tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Físico</th><th>Reservado</th><th>Disponível</th></tr>
+            <tr>
+              <th>SKU</th>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Disponível</th>
+              <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+            </tr>
           </thead>
           <tbody id="lista-produtos">
-            <tr><td colspan="6" style="color:var(--text-muted)">Aguardando conexão com o nó regional da UF...</td></tr>
+            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para conectar o banco...</td></tr>
           </tbody>
         </table>
       </div>
+    </div>
+    <div class="carrinho-drawer">
+      <div>
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO</h3>
+        <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">Carrinho vazio.</div>
+        <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;"></ul>
+      </div>
+      <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
+          <span>Total:</span><span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
+        </div>
+        <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
+      </div>
+    </div>
+  </div>
+</div>
 
       <!-- Tela: Upload CSV -->
       <div id="view-upload" class="view">
@@ -94,56 +241,64 @@
     </main>
   </div>
 
-  <!-- Tela: Controle Operador (Fila de Separação) -->
-<div id="view-operacaoLogistica" class="view">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <div>
-      <h2>Fila Ativa de Separação e Picking</h2>
-      <p style="color: var(--text-muted);">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+<div id="view-separacao" class="view">
+  <div class="tabela-operacional-wrapper">
+    <div class="tabela-operacional-topo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Fila Ativa de Separação e Picking</h2>
+          <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+        </div>
+        <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
+      </div>
     </div>
-    <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
+    <div class="tabela-operacional-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Pedido</th>
+            <th>Solicitante</th>
+            <th>Horário</th>
+            <th>Status</th>
+            <th>Ações Operacionais</th>
+          </tr>
+        </thead>
+        <tbody id="fila-picking-corpo">
+          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-  
-  <table>
-    <thead>
-      <tr>
-        <th>ID Pedido</th>
-        <th>Solicitante</th>
-        <th>Horário</th>
-        <th>Status</th>
-        <th>Ações Operacionais</th>
-      </tr>
-    </thead>
-    <tbody id="fila-picking-corpo">
-      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
-    </tbody>
-  </table>
 </div>
 
-<!-- Tela: Despacho e Faturamento RPA (Módulo 3) -->
-<div id="view-faturamentoRPA" class="view">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <div>
-      <h2>Painel de Expedição e Faturamento (RPA)</h2>
-      <p style="color: var(--text-muted);">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+<div id="view-faturamento" class="view">
+  <div class="tabela-operacional-wrapper">
+    <div class="tabela-operacional-topo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Painel de Expedição e Faturamento (RPA)</h2>
+          <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+        </div>
+        <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
+      </div>
     </div>
-    <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
+    <div class="tabela-operacional-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Pedido</th>
+            <th>Solicitante</th>
+            <th>Status Atual</th>
+            <th>Código de Rastreio / Nota</th>
+            <th>Ação de Fechamento</th>
+          </tr>
+        </thead>
+        <tbody id="fila-expedicao-corpo">
+          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>ID Pedido</th>
-        <th>Solicitante</th>
-        <th>Status Atual</th>
-        <th>Código de Rastreio / Nota</th>
-        <th>Ação de Fechamento</th>
-      </tr>
-    </thead>
-    <tbody id="fila-expedicao-corpo">
-      <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
-    </tbody>
-  </table>
 </div>
 
 
@@ -166,11 +321,9 @@
    * 1. Sistema de Navegação SPA Blindado
    */
 function navegar(id, elementoClicado) {
-  // Remove o estado ativo de todas as telas e links (aspas duplas corrigidas)
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-link").forEach(n => n.classList.remove("active"));
   
-  // Ativa a nova tela correspondente
   const telaAlvo = document.getElementById(`view-${id}`);
   if (telaAlvo) {
     telaAlvo.classList.add("active");
@@ -178,20 +331,19 @@ function navegar(id, elementoClicado) {
     console.error(`[Aloca WEB] Tela view-${id} não localizada no HTML.`);
   }
   
-  // Ativa o botão correto usando o parâmetro seguro (this)
   if (elementoClicado) {
     elementoClicado.classList.add("active");
   }
  
-  // Gatilhos automáticos de atualização de dados baseados na navegação
-  if (id === "faturamentoRPA") {
+  // GATILHOS ATUALIZADOS COM OS NOMES CURTOS:
+  if (id === "faturamento") {
     carregarFilaExpedicao();
   }
-  
-  if (id === "operacaoLogistica") {
+  if (id === "separacao") {
     buscarPedidosHoje();
   }    
 }
+
 
 
 // ISSO VAI NO SCRIPT DO SEU INDEX.HTML (GITHUB)
@@ -237,25 +389,21 @@ async function conectarNodoRegional() {
     }
   }
 
+  // AJUSTE CIRÚRGICO DA LIQUIDACAO DE DADOS:
   if (sucesso && dadosHttp && dadosHttp.sucesso) {
     if (dadosHttp.dados.length === 0) {
-      tabela.innerHTML = `<tr><td colspan="6">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
+      tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro para o segmento: ${AppState.segmento}</td></tr>`;
       return;
     }
-    tabela.innerHTML = dadosHttp.dados.map(p => `
-      <tr>
-        <td><strong>${p.sku}</strong></td>
-        <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
-        <td>${p.categoria}</td>
-        <td>${p.saldo_fisico}</td>
-        <td>${p.saldo_reservado}</td>
-        <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
-      </tr>
-    `).join('');
+    
+    // GATILHO ATUALIZADO: Passa o bloco para a engine híbrida injetar os seletores de busca e inputs do carrinho
+    renderizarCatalogoHibrido(dadosHttp.dados);
+    
   } else {
-    tabela.innerHTML = `<tr><td colspan="6" style="color:var(--error); font-weight: bold;">❌ Nó Regional Indisponível. Tente atualizar a página ou selecione a UF novamente.</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente atualizar a página ou selecione a UF novamente.</td></tr>`;
   }
 }
+
 
 
 function lerArquivoCSV(input) {
@@ -681,15 +829,18 @@ async function abrirModalDetalhes(idPedido) {
     const resJson = await resposta.json();
     carregando.style.display = "none";
 
-    if (resJson.sucesso) {
-      tabela.style.display = "table";
-      corpoItens.innerHTML = resJson.dados.map(item => `
-        <tr>
-          <td><strong>${item.sku}</strong></td>
-          <td style="font-weight: bold; color: var(--accent);">${item.quantidade} un</td>
-        </tr>
-      `).join('');
-    } else {
+  // Localize este trecho dentro da função abrirModalDetalhes no seu index.html e substitua:
+  if (resJson.sucesso) {
+    tabela.style.display = "table";
+    corpoItens.innerHTML = resJson.dados.map(item => `
+      <tr>
+        <td><strong>${item.sku}</strong></td>
+        <!-- Nova célula com o nome comercial do produto vindo do catálogo -->
+        <td><span style="font-size: 0.9rem; color: var(--text); font-weight: 500;">${item.nome}</span></td>
+        <td style="font-weight: bold; color: var(--accent); text-align: right;">${item.quantidade} un</td>
+      </tr>
+    `).join('');
+  } else {
       corpoItens.innerHTML = `<tr><td colspan="2" style="color: var(--error);">Erro: ${resJson.mensagem}</td></tr>`;
       tabela.style.display = "table";
     }
@@ -704,6 +855,221 @@ function fecharModalDetalhes() {
   document.getElementById("modalDetalhes").style.display = "none";
 }
 
+
+
+// Adicione a propriedade 'carrinho' ao seu objeto AppState global
+AppState.carrinho = [];
+AppState.produtosBackup = []; // Guarda a cópia para a busca local ultra-rápida
+
+/**
+ * 1. Renderização do Catálogo Estendida (Com Inputs de Quantidade)
+ */
+function renderizarCatalogoHibrido(produtos) {
+  const tabela = document.getElementById("lista-produtos");
+  AppState.produtosBackup = produtos; // Alimenta o cache de busca local
+
+  if (produtos.length === 0) {
+    tabela.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;">Nenhum registro encontrado para este segmento.</td></tr>`;
+    return;
+  }
+
+  // O SEGREDO ESTÁ AQUI: Injeção estrita dos atributos data-sku, data-nome e data-cat
+  tabela.innerHTML = produtos.map(p => `
+    <tr class="item-produto-linha" data-sku="${p.sku}" data-nome="${p.nome_produto.toLowerCase()}" data-cat="${p.categoria.toLowerCase()}">
+      <td><strong>${p.sku}</strong></td>
+      <td>${p.nome_produto}<br><small style="color:var(--text-muted)">${p.grade_dimensoes}</small></td>
+      <td><span class="badge" style="background: #f3f4f6; padding: 0.2rem 0.4rem; font-size: 0.75rem;">${p.categoria}</span></td>
+      <td style="color:var(--accent); font-weight:bold">${p.saldo_disponivel}</td>
+      <td>
+        <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+          <input type="number" id="input_qtd_${p.sku}" min="1" max="${p.saldo_disponivel}" value="1" style="width: 60px; padding: 0.3rem; text-align: center;">
+          <button onclick="adicionarAoCarrinho('${p.sku}')" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">+</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+
+// Lembre-se de alterar a linha de renderização dentro da sua função conectarNodoRegional() atual:
+// Troque a montagem antiga da tabela por: renderizarCatalogoHibrido(dadosHttp.dados);
+
+/**
+ * 2. Filtro de Busca Dinâmica em Tempo Real (Lado do Cliente - Ultra Instantâneo)
+ */
+function filtrarTabelaCatalogo() {
+  const termo = document.getElementById("buscaInput").value.trim().toLowerCase();
+  const linhas = document.querySelectorAll(".item-produto-linha");
+
+  linhas.forEach(linha => {
+    const sku = linha.getAttribute("data-sku").toLowerCase();
+    const nome = linha.getAttribute("data-nome");
+    const cat = linha.getAttribute("data-cat");
+
+    if (sku.includes(termo) || nome.includes(termo) || cat.includes(termo)) {
+      linha.style.display = "";
+    } else {
+      linha.style.display = "none";
+    }
+  });
+}
+
+/**
+ * 3. Gerenciamento do Carrinho Virtual
+ */
+function adicionarAoCarrinho(sku) {
+  const produto = AppState.produtosBackup.find(p => p.sku === sku);
+  const inputQtd = document.getElementById(`input_qtd_${sku}`);
+  const qtdDesejada = parseInt(inputQtd ? inputQtd.value : 1, 10);
+
+  if (!produto || isNaN(qtdDesejada) || qtdDesejada <= 0) return;
+
+  if (qtdDesejada > produto.saldo_disponivel) {
+    alert(`Estoque insuficiente! O saldo disponível para o SKU ${sku} é de ${produto.saldo_disponivel} un.`);
+    return;
+  }
+
+  // Verifica se o SKU já está no carrinho para apenas somar a quantidade
+  const itemExistente = AppState.carrinho.find(item => item.sku === sku);
+  if (itemExistente) {
+    const novaQtd = itemExistente.quantidade + qtdDesejada;
+    if (novaQtd > produto.saldo_disponivel) {
+      alert(`Aviso: A soma das quantidades no carrinho (${novaQtd}) excede o saldo disponível de ${produto.saldo_disponivel} un.`);
+      return;
+    }
+    itemExistente.quantity = novaQtd; // Alinha chaves
+  } else {
+    AppState.carrinho.push({ sku: sku, nome: produto.nome_produto, quantidade: qtdDesejada });
+  }
+    // Procure o final da sua função adicionarAoCarrinho(sku) e insira:
+    atualizarInterfaceCarrinho();
+    dispararToastNotificacao(sku, produto.nome_produto, qtdDesejada); // Dispara o pop-up invisível moderno!
+}
+
+function removerDoCarrinho(sku) {
+  AppState.carrinho = AppState.carrinho.filter(item => item.sku !== sku);
+  atualizarInterfaceCarrinho();
+}
+
+function atualizarInterfaceCarrinho() {
+  const vazioDiv = document.getElementById("carrinho-vazio");
+  const listaUl = document.getElementById("carrinho-lista");
+  const acoesDiv = document.getElementById("carrinho-acoes");
+  const totalSpan = document.getElementById("carrinho-total-qtd");
+
+  if (AppState.carrinho.length === 0) {
+    vazioDiv.style.display = "block";
+    listaUl.style.display = "none";
+    acoesDiv.style.display = "none";
+    return;
+  }
+
+  vazioDiv.style.display = "none";
+  listaUl.style.display = "block";
+  acoesDiv.style.display = "block";
+
+  let totalGeral = 0;
+
+  listaUl.innerHTML = AppState.carrinho.map(item => {
+    totalGeral += item.quantidade;
+    return `
+      <li style="display: flex; justify-content: space-between; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px dashed var(--border); font-size: 0.85rem;">
+        <div>
+          <strong>${item.sku}</strong><br>
+          <span style="color: var(--text-muted);">${item.nome}</span>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <span style="font-weight: bold; color: var(--accent);">${item.quantidade}x</span>
+          <button onclick="removerDoCarrinho('${item.sku}')" style="background: none; color: var(--error); border: none; padding: 0; cursor: pointer; font-size: 1rem;">✕</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  totalSpan.innerHTML = `${totalGeral} un`;
+}
+
+/**
+ * 4. Submissão Transacional do Carrinho Manual (Conecta com a mesma rota do CSV)
+ */
+async function finalizarPedidoManual(btn) {
+  if (AppState.carrinho.length === 0) return;
+  if (!confirm("Confirma o fechamento deste pedido manual e o envio para a fila de picking?")) return;
+
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Enviando Pedido...";
+
+  const payloadEnvio = {
+    acao: "CRIAR_PEDIDO",
+    usuario: AppState.usuario,
+    // Mapeia exatamente a chave 'itens' com a nomenclatura que o backend blindado espera
+    itens: AppState.carrinho.map(it => ({ sku: it.sku, quantidade: it.quantidade }))
+  };
+
+  try {
+    const resposta = await fetch(AppState.apiUrl, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(payloadEnvio)
+    });
+    
+    const resJson = await resposta.json();
+
+    if (resJson.sucesso) {
+      alert(`[SUCESSO] ${resJson.mensagem}`);
+      AppState.carrinho = []; // Limpa o carrinho
+      atualizarInterfaceCarrinho();
+      conectarNodoRegional(); // Recarrega o catálogo para abater o saldo disponível na tela
+    } else {
+      alert(`[REJEITADO PELO BANCO] ${resJson.mensagem}`);
+      btn.disabled = false;
+      btn.innerHTML = "🚀 Finalizar Pedido";
+    }
+  } catch (err) {
+    alert("Erro de comunicação ao enviar pedido manual.");
+    btn.disabled = false;
+    btn.innerHTML = "🚀 Finalizar Pedido";
+  }
+}
+
+/**
+ * Injeta e exibe um Toast flutuante Nu-Style no canto inferior da tela
+ */
+function dispararToastNotificacao(sku, nomeItem, quantidade) {
+  // Remove qualquer Toast anterior ativo para não encavalar notificações
+  const toastAntigo = document.getElementById("aloca-toast-ativo");
+  if (toastAntigo) toastAntigo.remove();
+
+  // Cria a estrutura física do elemento na árvore do navegador (DOM)
+  const toast = document.createElement("div");
+  toast.id = "aloca-toast-ativo";
+  toast.className = "toast-container";
+  
+  // Conteúdo do Toast no padrão Paper-Terminal roxo
+  toast.innerHTML = `
+    <span>💜</span>
+    <div>
+      <strong>+${quantidade} un</strong> de ${sku}<br>
+      <span style="color: #a78bfa; font-size:0.75rem;">${nomeItem.substring(0, 32)}...</span>
+    </div>
+  `;
+
+  document.body.appendChild(toast);
+
+  // Destrói o elemento sozinho após 3.5 segundos (UX Fade Out)
+  setTimeout(() => {
+    if (toast) {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(0.5rem)";
+      toast.style.transition = "all 0.3s ease";
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3500);
+}
+
+  
 </script>
 
 <!-- Componente Modal: Detalhes do Pedido (Nu-Style White Mode) -->
@@ -736,17 +1102,20 @@ function fecharModalDetalhes() {
     
     <div id="modal-carregando" style="color: var(--accent); font-family: monospace; display: none;">⏳ Buscando composição do lote no banco distribuído...</div>
     
+    <!-- Localize a table do modalDetalhes e ajuste o thead para incluir o Produto -->
     <table id="modal-tabela" style="margin-top: 0; display: none;">
       <thead>
         <tr>
           <th>SKU</th>
-          <th>Quantidade Solicitada</th>
+          <th>Produto / Descrição</th> <!-- Nova Coluna Injetada -->
+          <th style="text-align: right;">Qtd Solicitada</th>
         </tr>
       </thead>
       <tbody id="modal-corpo-itens">
         <!-- Injeção dinâmica dos itens -->
       </tbody>
     </table>
+
   </div>
 </div>
 
