@@ -36,37 +36,37 @@
     .nav-link { background: none; border: 1px solid transparent; color: var(--text-muted); text-align: left; transition: all 0.2s; font-weight: 600; }
     .nav-link.active, .nav-link:hover { background: var(--bg-main); border-color: var(--border); color: var(--accent); border-left: 4px solid var(--accent); }
     
-/* Garante que o painel principal se adapte e não corte elementos */
-main { 
-  background: var(--bg-surface); 
-  border: 1px solid var(--border); 
-  padding: 2rem; 
-  height: 100%; 
-  overflow: hidden; /* O scroll agora é controlado INDIVIDUALMENTE por cada tela */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
+    /* Garante que o painel principal se adapte e não corte elementos */
+    main { 
+      background: var(--bg-surface); 
+      border: 1px solid var(--border); 
+      padding: 2rem; 
+      height: 100%; 
+      overflow: hidden; /* O scroll agora é controlado INDIVIDUALMENTE por cada tela */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
 
-/* Cada visualização agora é uma esteira vertical independente de 100% da altura */
-.view { 
-  display: none; 
-  height: 100%;
-}
-.view.active { 
-  display: flex;
-  flex-direction: column;
-}
+    /* FIX TRANSACIONAL DAS VIEWS: Força o comportamento estável de bloco independente */
+    .view { 
+      display: none; 
+      height: 100%;
+      width: 100%;
+    }
+    .view.active { 
+      display: block !important; /* Desfaz o flex anterior que causava o sumiço das outras duas abas */
+    }
 
-/* Cria um container de rolagem exclusivo para as tabelas das outras telas */
-.tabela-container-scroll {
-  flex-grow: 1;
-  overflow-y: auto;
-  margin-top: 1rem;
-  padding-right: 0.5rem;
-}
+    /* Cria um container de rolagem exclusivo para as tabelas das outras telas */
+    .tabela-container-scroll {
+      overflow-y: auto;
+      margin-top: 1rem;
+      padding-right: 0.5rem;
+      max-height: calc(100vh - 16rem); /* Define limite exato de viewport para o operador ver as tabelas */
+    }
     
     table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
     th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
-    /* Localize a regra 'th' antiga e substitua por esta: */
+    
     /* Força os títulos da tabela a ficarem colados no topo do container de scroll */
     th { 
       color: var(--text-muted); 
@@ -88,38 +88,36 @@ main {
     /* ==========================================================================
        5. NOVAS CLASSES: Motor de Fixação do Carrinho e Notificações Toast 
        ========================================================================== */
-/* Divisão Híbrida do Catálogo: Altura fixa controlada de 100% da aba */
-.catalogo-grid {
-  display: grid; 
-  grid-template-columns: 1fr 340px; 
-  gap: 2rem; 
-  align-items: start;
-  height: 100%; /* Ocupa toda a altura do main */
-}
+    /* Divisão Híbrida do Catálogo: Altura fixa controlada de 100% da aba */
+    .catalogo-grid {
+      display: grid; 
+      grid-template-columns: 1fr 340px; 
+      gap: 2rem; 
+      align-items: start;
+      height: 100%; /* Ocupa toda a altura do main */
+    }
 
-/* Coluna da Esquerda: Transforma em uma esteira Flex vertical */
-.catalogo-corpo-esquerda {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 12rem); /* Trava a altura útil para alinhar com o viewport */
-}
+    /* Coluna da Esquerda: Transforma em uma esteira Flex vertical */
+    .catalogo-corpo-esquerda {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 12rem); /* Trava a altura útil para alinhar com o viewport */
+    }
 
-/* Bloco do Topo: Fica 100% fixo por natureza, sem rolar */
-.catalogo-topo-fixo {
-  flex-shrink: 0; /* Impede que este bloco encolha */
-  background: var(--bg-surface);
-  padding-bottom: 1rem;
-  z-index: 20;
-}
+    /* Bloco do Topo: Fica 100% fixo por natureza, sem rolar */
+    .catalogo-topo-fixo {
+      flex-shrink: 0; /* Impede que este bloco encolha */
+      background: var(--bg-surface);
+      padding-bottom: 1rem;
+      z-index: 20;
+    }
 
-/* Container da Tabela: Recebe a rolagem independente estrita */
-.catalogo-tabela-scroll {
-  flex-grow: 1;
-  overflow-y: auto; /* A rolagem acontece APENAS aqui dentro */
-  padding-right: 0.5rem;
-}
-
-
+    /* Container da Tabela: Recebe a rolagem independente estrita */
+    .catalogo-tabela-scroll {
+      flex-grow: 1;
+      overflow-y: auto; /* A rolagem acontece APENAS aqui dentro */
+      padding-right: 0.5rem;
+    }
 
     .carrinho-drawer {
       background: var(--bg-main); 
@@ -160,6 +158,7 @@ main {
     }
   </style>
 
+
 </head>
 <body>
 
@@ -185,67 +184,46 @@ main {
     
     <main>
       
-    <!-- Tela: Catálogo Híbrido com Tudo Congelado no Topo -->
-    <div id="view-catalogo" class="view active" style="height: 100%;">
-      <div class="catalogo-grid">
-        
-        <!-- Coluna Esquerda Organizada -->
-        <div class="catalogo-corpo-esquerda">
-          
-          <!-- [BLOCO FIXO]: Títulos e Campo de Busca (Nunca somem da tela) -->
-          <div class="catalogo-topo-fixo">
-            <h2>Catálogo de Itens Regional</h2>
-            <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
-            
-            <div style="display: flex; gap: 1rem;">
-              <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
-            </div>
-          </div>
-    
-          <!-- [BLOCO ROLÁVEL]: Apenas a tabela desliza aqui dentro -->
-          <div class="catalogo-tabela-scroll">
-            <table style="margin-top: 0;">
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Produto</th>
-                  <th>Categoria</th>
-                  <th>Disponível</th>
-                  <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
-                </tr>
-              </thead>
-              <tbody id="lista-produtos">
-                <tr><td colspan="5" style="color:var(--text-muted); text-align: center;">Aguardando conexão com o nó regional da UF...</td></tr>
-              </tbody>
-            </table>
-          </div>
-    
-        </div>
-    
-        <!-- Coluna Direita Fixa: Gaveta do Carrinho (Inalterada) -->
-        <div class="carrinho-drawer">
-          <div>
-            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO CORRENTE</h3>
-            <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">
-              Carrinho vazio. Use a tabela ao lado para incluir itens.
-            </div>
-            <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;">
-              <!-- Injeção dinâmica -->
-            </ul>
-          </div>
-          
-          <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
-            <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
-              <span>Total de Itens:</span>
-              <span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
-            </div>
-            <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
-          </div>
-        </div>
-    
+<div id="view-catalogo" class="view active">
+  <div class="catalogo-grid">
+    <div class="catalogo-corpo-esquerda">
+      <div class="catalogo-topo-fixo">
+        <h2>Catálogo de Itens Regional</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+        <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+      </div>
+      <div class="catalogo-tabela-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th>Disponível</th>
+              <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+            </tr>
+          </thead>
+          <tbody id="lista-produtos">
+            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para conectar o banco...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-
+    <div class="carrinho-drawer">
+      <div>
+        <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO</h3>
+        <div id="carrinho-vazio" style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 2rem 0;">Carrinho vazio.</div>
+        <ul id="carrinho-lista" style="list-style: none; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; display: none;"></ul>
+      </div>
+      <div id="carrinho-acoes" style="margin-top: 1.5rem; display: none; border-top: 1px solid var(--border); padding-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 1rem; font-size: 0.95rem;">
+          <span>Total:</span><span id="carrinho-total-qtd" style="color: var(--accent);">0</span>
+        </div>
+        <button id="btn-finalizar-manual" onclick="finalizarPedidoManual(this)" style="width: 100%; text-align: center;">🚀 Finalizar Pedido</button>
+      </div>
+    </div>
+  </div>
+</div>
 
       <!-- Tela: Upload CSV -->
       <div id="view-upload" class="view">
@@ -259,72 +237,67 @@ main {
     </main>
   </div>
 
-<!-- Tela: Controle Operador (Fila de Separação) -->
 <div id="view-operacaoLogistica" class="view">
-  <!-- TOPO FIXO: Ações e Títulos no topo da esteira -->
-  <div style="flex-shrink: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <h2>Fila Ativa de Separação e Picking</h2>
-        <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+  <div class="tabela-operacional-wrapper">
+    <div class="tabela-operacional-topo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Fila Ativa de Separação e Picking</h2>
+          <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+        </div>
+        <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
       </div>
-      <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
     </div>
-  </div>
-  
-  <!-- CORPO ROLÁVEL: Apenas a lista de pedidos desliza -->
-  <div class="tabela-container-scroll">
-    <table style="margin-top: 0;">
-      <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
-        <tr>
-          <th>ID Pedido</th>
-          <th>Solicitante</th>
-          <th>Horário</th>
-          <th>Status</th>
-          <th>Ações Operacionais</th>
-        </tr>
-      </thead>
-      <tbody id="fila-picking-corpo">
-        <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
-      </tbody>
-    </table>
+    <div class="tabela-operacional-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Pedido</th>
+            <th>Solicitante</th>
+            <th>Horário</th>
+            <th>Status</th>
+            <th>Ações Operacionais</th>
+          </tr>
+        </thead>
+        <tbody id="fila-picking-corpo">
+          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 
-<!-- Tela: Despacho e Faturamento RPA (Módulo 3) -->
+
 <div id="view-faturamentoRPA" class="view">
-  <!-- TOPO FIXO: Títulos e Filtros fiscais -->
-  <div style="flex-shrink: 0; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <h2>Painel de Expedição e Faturamento (RPA)</h2>
-        <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+  <div class="tabela-operacional-wrapper">
+    <div class="tabela-operacional-topo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Painel de Expedição e Faturamento (RPA)</h2>
+          <p style="color: var(--text-muted); margin-top: 0.2rem;">Confirmação de saída física, anexação de rastreio e liberação de dados para o robô fiscal.</p>
+        </div>
+        <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
       </div>
-      <button onclick="carregarFilaExpedicao()" style="background: var(--text); color: var(--bg-surface); border: 1px solid var(--border); padding: 0.5rem 1rem;">🔄 Atualizar Faturamento</button>
+    </div>
+    <div class="tabela-operacional-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>ID Pedido</th>
+            <th>Solicitante</th>
+            <th>Status Atual</th>
+            <th>Código de Rastreio / Nota</th>
+            <th>Ação de Fechamento</th>
+          </tr>
+        </thead>
+        <tbody id="fila-expedicao-corpo">
+          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
-
-  <!-- CORPO ROLÁVEL: A listagem de faturamento desliza de forma isolada -->
-  <div class="tabela-container-scroll">
-    <table style="margin-top: 0;">
-      <thead style="position: sticky; top: 0; background: var(--bg-surface); z-index: 10;">
-        <tr>
-          <th>ID Pedido</th>
-          <th>Solicitante</th>
-          <th>Status Atual</th>
-          <th>Código de Rastreio / Nota</th>
-          <th>Ação de Fechamento</th>
-        </tr>
-      </thead>
-      <tbody id="fila-expedicao-corpo">
-        <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para monitorar a expedição...</td></tr>
-      </tbody>
-    </table>
-  </div>
 </div>
-
-
 
   
 <script>
