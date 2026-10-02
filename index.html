@@ -44,18 +44,19 @@
     table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
     th, td { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); }
     /* Localize a regra 'th' antiga e substitua por esta: */
+    /* Força os títulos da tabela a ficarem colados no topo do container de scroll */
     th { 
       color: var(--text-muted); 
       font-size: 0.8rem; 
       text-transform: uppercase; 
-      
-      /* MOTOR DE FIXAÇÃO DO CABEÇALHO DA TABELA */
       position: sticky;
       top: 0;
-      background-color: var(--bg-surface); /* Força o fundo branco para tampar os produtos que rolam por baixo */
-      z-index: 10; /* Garante que os títulos fiquem por cima das linhas de dados */
-      border-bottom: 2px solid var(--border); /* Deixa a linha de divisão mais marcada ao rolar */
-    }    
+      background-color: var(--bg-surface);
+      z-index: 10;
+      border-bottom: 2px solid var(--border);
+      padding: 1rem;
+    }
+ 
     /* Console "Estilo Documento" elegante e legível */
     .console { background: #fdfdfd; border: 1px solid var(--border); padding: 1rem; font-family: monospace; font-size: 0.85rem; color: #581c87; margin-top: 1rem; max-height: 180px; overflow-y: auto; white-space: pre-wrap; border-left: 4px solid var(--accent); }
     .dropzone { border: 2px dashed var(--border); padding: 3rem; text-align: center; color: var(--text-muted); cursor: pointer; margin-top: 1rem; transition: background 0.2s; }
@@ -64,12 +65,38 @@
     /* ==========================================================================
        5. NOVAS CLASSES: Motor de Fixação do Carrinho e Notificações Toast 
        ========================================================================== */
-    .catalogo-grid {
-      display: grid; 
-      grid-template-columns: 1fr 340px; 
-      gap: 2rem; 
-      align-items: start;
-    }
+/* Divisão Híbrida do Catálogo: Altura fixa controlada de 100% da aba */
+.catalogo-grid {
+  display: grid; 
+  grid-template-columns: 1fr 340px; 
+  gap: 2rem; 
+  align-items: start;
+  height: 100%; /* Ocupa toda a altura do main */
+}
+
+/* Coluna da Esquerda: Transforma em uma esteira Flex vertical */
+.catalogo-corpo-esquerda {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 12rem); /* Trava a altura útil para alinhar com o viewport */
+}
+
+/* Bloco do Topo: Fica 100% fixo por natureza, sem rolar */
+.catalogo-topo-fixo {
+  flex-shrink: 0; /* Impede que este bloco encolha */
+  background: var(--bg-surface);
+  padding-bottom: 1rem;
+  z-index: 20;
+}
+
+/* Container da Tabela: Recebe a rolagem independente estrita */
+.catalogo-tabela-scroll {
+  flex-grow: 1;
+  overflow-y: auto; /* A rolagem acontece APENAS aqui dentro */
+  padding-right: 0.5rem;
+}
+
+
 
     .carrinho-drawer {
       background: var(--bg-main); 
@@ -135,37 +162,44 @@
     
     <main>
       
-    <!-- Tela: Catálogo Híbrido com Busca e Carrinho Fixo -->
-    <div id="view-catalogo" class="view active">
+    <!-- Tela: Catálogo Híbrido com Tudo Congelado no Topo -->
+    <div id="view-catalogo" class="view active" style="height: 100%;">
       <div class="catalogo-grid">
         
-        <!-- Coluna Esquerda Rolável -->
-        <div>
-          <h2>Catálogo de Itens Regional</h2>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+        <!-- Coluna Esquerda Organizada -->
+        <div class="catalogo-corpo-esquerda">
           
-          <!-- Caixa de Busca Fixada no escopo acima -->
-          <div style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
-            <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+          <!-- [BLOCO FIXO]: Títulos e Campo de Busca (Nunca somem da tela) -->
+          <div class="catalogo-topo-fixo">
+            <h2>Catálogo de Itens Regional</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.2rem;">Consulte saldos e monte seu pedido manualmente ou via lote.</p>
+            
+            <div style="display: flex; gap: 1rem;">
+              <input type="text" id="buscaInput" oninput="filtrarTabelaCatalogo()" placeholder="🔍 Buscar por SKU, Produto ou Categoria..." style="width: 100%; border-radius: 4px;">
+            </div>
           </div>
     
-          <table>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Produto</th>
-                <th>Categoria</th>
-                <th>Disponível</th>
-                <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
-              </tr>
-            </thead>
-            <tbody id="lista-produtos">
-              <tr><td colspan="5" style="color:var(--text-muted)">Aguardando conexão com o nó regional da UF...</td></tr>
-            </tbody>
-          </table>
+          <!-- [BLOCO ROLÁVEL]: Apenas a tabela desliza aqui dentro -->
+          <div class="catalogo-tabela-scroll">
+            <table style="margin-top: 0;">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Disponível</th>
+                  <th style="width: 150px; text-align: center;">Adicionar ao Pedido</th>
+                </tr>
+              </thead>
+              <tbody id="lista-produtos">
+                <tr><td colspan="5" style="color:var(--text-muted); text-align: center;">Aguardando conexão com o nó regional da UF...</td></tr>
+              </tbody>
+            </table>
+          </div>
+    
         </div>
     
-        <!-- Coluna Direita Fixa: Gaveta do Carrinho -->
+        <!-- Coluna Direita Fixa: Gaveta do Carrinho (Inalterada) -->
         <div class="carrinho-drawer">
           <div>
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">🛒 MEU PEDIDO CORRENTE</h3>
@@ -188,6 +222,7 @@
     
       </div>
     </div>
+
 
       <!-- Tela: Upload CSV -->
       <div id="view-upload" class="view">
