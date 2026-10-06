@@ -783,19 +783,20 @@ function lerArquivoCSV(input) {
     
     consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
 
-    // Processamento a partir da linha 1 (pula a linha de cabeçalhos corporativos)
+    // Varredura a partir da linha 1 (pula a linha de cabeçalhos corporativos)
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
       if (!linhaLimpa) continue; 
 
       const cols = linhaLimpa.split(separador);
       
-      // Validação baseada no novo leiaute de 9 colunas da sua planilha de faturamento
+      // Validação: Garante que a linha possui as colunas necessárias para processar
       if (cols && cols.length >= 8) {
-        // CORREÇÃO CIRÚRGICA DOS ÍNDICES DE COLUNA:
+        
+        // CORREÇÃO RÍGIDA E DEFINITIVA DE ÍNDICES (Baseado no layout de 9 colunas do seu print):
         const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B (Índice 1): PEDIDO
         const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D (Índice 3): NOME FANTASIA
-        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F (Índice 5): CÓDIGO MATERIAL
+        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F (Índice 5): CÓDIGO MATERIAL (SKU)
         const qtdBruto = cols[7] ? cols[7].toString().trim() : "";      // Coluna H (Índice 7): QTD
 
         const skuLimpo = skuBruto.toUpperCase();
@@ -823,7 +824,6 @@ function lerArquivoCSV(input) {
         errosSintaxe.push(`Linha ${i + 1}: Estrutura fora do padrão de colunas.`);
       }
     }
-
     if (errosSintaxe.length > 0) {
       consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[LOTE REJEITADO] Erros de formatação encontrados:</span>\n` + errosSintaxe.join("\n");
       return;
