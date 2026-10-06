@@ -746,12 +746,12 @@
 
   function fecharModalDetalhes() { document.getElementById("modalDetalhes").style.display = "none"; }
 
-  function lerArquivoCSV(input) {
+function lerArquivoCSV(input) {
   const consoleOut = document.getElementById("consoleOut");
   consoleOut.style.display = "block";
   
   if (!input.files || input.files.length === 0) {
-    consoleOut.innerHTML = `<span style="color: var(--error);">[ERRO] Nenhum arquivo foi selecionado.</span>\n`;
+    document.getElementById("consoleOut").innerHTML = `<span style="color: var(--error);">[ERRO] Nenhum arquivo foi selecionado.</span>\n`;
     return;
   }
   
@@ -766,43 +766,59 @@
   const leitor = new FileReader();
   leitor.onload = async function(e) {
     const textoBruto = e.target.result;
-    const linhasRaw = textoBruto.split(/\r?\n/);
+    const linhasRaw = textoBruto.split(\(/\r\)?\n/);
     
-    let itens = [];
+    // Dicionário dinâmico em memória para agrupar múltiplos itens sob o mesmo ID de pedido
+    const pedidosAgrupados = {};
     let errosSintaxe = [];
 
     // AUTO-DETECÇÃO DE SEPARADOR REGIONAL
     const primeiraLinha = linhasRaw[0] ? linhasRaw[0].trim() : "";
     let separador = ","; 
-    
     if (primeiraLinha.includes(";")) {
       separador = ";";
     }
     
     consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
 
-    // Processamento a partir da linha 1 (pula cabeçalho)
+    // Varredura a partir da linha 1 (pula cabeçalho corporativo)
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
       if (!linhaLimpa) continue; 
 
       const cols = linhaLimpa.split(separador);
       
-      if (cols && cols.length >= 2) {
-        const skuBruto = cols[0] ? cols[0].toString().trim() : "";
-        const qtdBruto = cols[1] ? cols[1].toString().trim() : "";
+      // Valida o comprimento baseado no novo leiaute de 9 colunas
+      if (cols && cols.length >= 8) {
+        const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B: PEDIDO
+        const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D: NOME FANTASIA
+        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F: CÓDIGO MATERIAL
+        const qtdBruto = cols[7] ? cols[7].toString().trim() : "";      // Coluna H: QTD
 
         const skuLimpo = skuBruto.toUpperCase();
         const qtdLimpa = parseInt(qtdBruto, 10);
 
-        if (!skuLimpo || isNaN(qtdLimpa)) {
-          errosSintaxe.push(`Linha ${i + 1}: Dados corrompidos (Encontrado SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
+        if (!idPedido || !skuLimpo || isNaN(qtdLimpa) || qtdLimpa <= 0) {
+          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos (Pedido: "${idPedido}" | SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
           continue;
         }
 
-        itens.push({ sku: skuLimpo, quantidade: qtdLimpa });
+        // Agrupamento estrutural: se o pedido ainda não existe no mapa, inicializa o mestre
+        if (!pedidosAgrupados[idPedido]) {
+          pedidosAgrupados[idPedido] = {
+            id_pedido: idPedido,
+            usuario: nomeLoja || "Regional",
+            itens: []
+          };
+        }
+
+        // Anexa o sub-item à array interna do pedido correspondente
+        pedidosAgrupados[idPedido].itens.push({
+          sku: skuLimpo,
+          quantidade: qtdLimpa
+        });
       } else {
-        errosSintaxe.push(`Linha ${i + 1}: Erro de leitura estrutural na linha. Verifique os dados.`);
+        errosSintaxe.push(`Linha ${i + 1}: Linha fora do padrão estrutural do novo leiaute.`);
       }
     }
 
@@ -811,47 +827,54 @@
       return;
     }
 
-    if (itens.length === 0) {
+    const listaPedidosParaEnvio = Object.values(pedidosAgrupados);
+    if (listaPedidosParaEnvio.length === 0) {
       consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[ERRO] O arquivo CSV não contém nenhuma linha de dados válida.</span>`;
       return;
     }
 
-    consoleOut.innerHTML += `> Lote sanitizado com sucesso. Enviando ${itens.length} itens de forma atômica para o banco distribuído...\n`;
+    consoleOut.innerHTML += `> Lote sanitizado. Enviando ${listaPedidosParaEnvio.length} pedido(s) mestre agrupado(s) de forma sequencial...\n`;
     
-    const payloadEnvio = {
-      acao: "CRIAR_PEDIDO",
-      usuario: AppState.usuario,
-      itens: itens
-    };
-
-    try {
-      const resposta = await fetch(AppState.apiUrl, {
-        method: "POST",
-        mode: "cors",
-        redirect: "follow",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(payloadEnvio)
-      });
+    // Processamento em lote sequencial respeitando o LockService concorrente do backend
+    for (const pedidoPayload of listaPedidosParaEnvio) {
+      consoleOut.innerHTML += `> Transacionando Pedido Comercial #${pedidoPayload.id_pedido}... `;
       
-      const resJson = await resposta.json();
+      try {
+        const resposta = await fetch(AppState.apiUrl, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({
+            acao: "CRIAR_PEDIDO",
+            idPedidoManual: pedidoPayload.id_pedido, // Chave injetada para herdar o ID real do SAP/Relatório
+            usuario: pedidoPayload.usuario,
+            itens: pedidoPayload.itens
+          })
+        });
+        
+        const resJson = await resposta.json();
 
-      if (resJson.sucesso) {
-        consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">[SUCESSO] ${resJson.mensagem}</span>`;
-        if (typeof conectarNodoRegional === "function") {
-          conectarNodoRegional(); 
+        if (resJson.sucesso) {
+          consoleOut.innerHTML += `<span style="color: var(--accent); font-weight: bold;">[SUCESSO]</span>\n`;
+        } else {
+          consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[REJEITADO]</span> -> ${resJson.mensagem}\n`;
         }
-      } else {
-        consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[REJEITADO PELO BANCO DE DADOS]</span>\n${resJson.mensagem}\n`;
-        if (resJson.erros) resJson.erros.forEach(err => consoleOut.innerHTML += ` - ${err}\n`);
+      } catch (err) {
+        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[ERRO DE REDE]</span>\n`;
+        console.error("[CSV Loop Request Error]", err);
       }
-    } catch (err) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error);">[ERRO DE COMUNICAÇÃO] O servidor não respondeu. Certifique-se de que a API está ativa.</span>`;
-      console.error("[CSV Upload Error]", err);
+    }
+
+    consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">> [PROCESSO CONCLUÍDO] Todos os lotes foram processados.</span>\n`;
+    if (typeof conectarNodoRegional === "function") {
+      conectarNodoRegional(); 
     }
   };
   
   leitor.readAsText(arquivo);
 }
+
 
 
   
