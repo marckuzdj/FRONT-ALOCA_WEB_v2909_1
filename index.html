@@ -767,51 +767,68 @@ function lerArquivoCSV(input) {
   const leitor = new FileReader();
   leitor.onload = async function(e) {
     const textoBruto = e.target.result;
-    
-    // ✅ VERSÃO SANITIZADA E CORRETA:
-    const linhasRaw = textoBruto.split(/\r?\n/);
+    const linhasRaw = textoBruto.split(\(/\r\)?\n/);
     
     const pedidosAgrupados = {};
     let errosSintaxe = [];
 
-    // AUTO-DETECÇÃO DE SEPARADOR REGIONAL
-    const primeiraLinha = linhasRaw[0] ? linhasRaw[0].trim() : "";
+    // 1. AUTO-DETECÇÃO DE SEPARADOR REGIONAL
+    const primeiraLinhaRaw = linhasRaw[0] ? linhasRaw[0].trim() : "";
     let separador = ","; 
-    if (primeiraLinha.includes(";")) {
+    if (primeiraLinhaRaw.includes(";")) {
       separador = ";";
     }
-    
     consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
 
-    // Varredura a partir da linha 1 (pula a linha de cabeçalhos corporativos)
+    // 2. MAPEAMENTO DINÂMICO DE CABEÇALHOS (Varre a Linha 1 para achar os alvos reais)
+    const colunasCabecalho = primeiraLinhaRaw.split(separador).map(h => h.trim().toUpperCase());
+    
+    // Procura as posições exatas pelos nomes oficiais do seu print
+    const idxPedido = colunasCabecalho.indexOf("PEDIDO");
+    const idxLoja = colunasCabecalho.indexOf("NOME FANTASIA");
+    const idxSku = colunasCabecalho.indexOf("CÓDIGO MATERIAL");
+    const idxQtd = colunasCabecalho.indexOf("QTD");
+
+    // LOG DE SEGURANÇA E COMPLIANCE INDUSTRIAL
+    consoleOut.innerHTML += `> Índices mapeados em tempo real -> Pedido: [${idxPedido}] | Loja: [${idxLoja}] | SKU: [${idxSku}] | Qtd: [${idxQtd}]\n`;
+
+    // Se o CSV não contiver as colunas principais com esses nomes exatos, barra o processo na hora
+    if (idxPedido === -1 || idxSku === -1 || idxQtd === -1) {
+      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[LOTE REJEITADO] O arquivo não possui os cabeçalhos obrigatórios corporativos (PEDIDO, CÓDIGO MATERIAL, QTD).</span>\n`;
+      return;
+    }
+
+    // 3. PROCESSAMENTO REATIVO DAS LINHAS DE DADOS
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
       if (!linhaLimpa) continue; 
 
       const cols = linhaLimpa.split(separador);
       
-      // Validação: Garante que a linha possui as colunas necessárias para processar
-      if (cols && cols.length >= 8) {
+      // Garante que a linha atual possui o número mínimo de colunas necessárias descobertas no mapeamento
+      const maiorIndiceNecessario = Math.max(idxPedido, idxLoja, idxSku, idxQtd);
+      if (cols && cols.length > maiorIndiceNecessario) {
         
-        // CORREÇÃO RÍGIDA E DEFINITIVA DE ÍNDICES (Baseado no layout de 9 colunas do seu print):
-        const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B (Índice 1): PEDIDO
-        const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D (Índice 3): NOME FANTASIA
-        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F (Índice 5): CÓDIGO MATERIAL (SKU)
-        const qtdBruto = cols[7] ? cols[7].toString().trim() : "";      // Coluna H (Índice 7): QTD
+        // MAPEAMENTO DINÂMICO BASEADO NOS ÍNDICES DESCOBERTOS NA LINHA 1
+        const idPedido = cols[idxPedido] ? cols[idxPedido].toString().trim() : "";
+        const nomeLoja = idxLoja !== -1 && cols[idxLoja] ? cols[idxLoja].toString().trim() : "Uploader Corporativo";
+        const skuBruto = cols[idxSku] ? cols[idxSku].toString().trim() : "";
+        const qtdBruto = cols[idxQtd] ? cols[idxQtd].toString().trim() : "";
 
         const skuLimpo = skuBruto.toUpperCase();
         const qtdLimpa = parseInt(qtdBruto, 10);
 
-        if (!idPedido || !skuLimpo || isNaN(qtdLimpa) || qtdLimpa <= 0) {
-          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos (Pedido: "${idPedido}" | SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
+        // Se falhar a validação do produto ou quantidade
+        if (!idPedido || !skuLimpo || isNaN(qtdLimpa) || qtdLimpa <= 0 || skuLimpo === "-") {
+          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos ou vazios (Pedido: "${idPedido}" | SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
           continue;
         }
 
-        // Inteligência Group By: Agrupa linhas repetidas sob o mesmo ID de pedido mestre
+        // Inteligência Group By: Consolida itens duplicados sob o mesmo ID de Pedido Mestre
         if (!pedidosAgrupados[idPedido]) {
           pedidosAgrupados[idPedido] = {
             id_pedido: idPedido,
-            usuario: nomeLoja || "Uploader Corporativo",
+            usuario: nomeLoja,
             itens: []
           };
         }
@@ -820,27 +837,26 @@ function lerArquivoCSV(input) {
           sku: skuLimpo,
           quantidade: qtdLimpa
         });
-      } else {
-        errosSintaxe.push(`Linha ${i + 1}: Estrutura fora do padrão de colunas.`);
       }
     }
+
+    // 4. ENVIO SEQUENCIAL ASSÍNCRONO PARA O GOOGLE SHEETS
     if (errosSintaxe.length > 0) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[LOTE REJEITADO] Erros de formatação encontrados:</span>\n` + errosSintaxe.join("\n");
+      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[LOTE REJEITADO] Erros de compliance encontrados nas linhas:</span>\n` + errosSintaxe.join("\n");
       return;
     }
 
     const listaPedidosParaEnvio = Object.values(pedidosAgrupados);
     if (listaPedidosParaEnvio.length === 0) {
-      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[ERRO] O arquivo CSV não contém nenhuma linha de dados válida.</span>`;
+      consoleOut.innerHTML += `\n<span style="color: var(--error); font-weight: bold;">[ERRO] Nenhuma linha de dados processável foi localizada no arquivo.</span>`;
       return;
     }
 
-    consoleOut.innerHTML += `> Lote sanitizado! Consolidados ${listaPedidosParaEnvio.length} pedido(s) mestre(s) único(s) após agrupamento.\n`;
-    consoleOut.innerHTML += `> Iniciando transmissão assíncrona sequencial para o banco distribuído...\n\n`;
+    consoleOut.innerHTML += `> Lote sanitizado! Consolidados ${listaPedidosParaEnvio.length} pedido(s) mestre(s) único(s) após agrupamento regional.\n`;
+    consoleOut.innerHTML += `> Iniciando integração atômica sequencial via API Gateway...\n\n`;
     
-    // Despacha os blocos consolidados mantendo as travas atômicas do LockService
     for (const pedidoPayload of listaPedidosParaEnvio) {
-      consoleOut.innerHTML += `> Transacionando Pedido #${pedidoPayload.id_pedido} (${pedidoPayload.itens.length} itens)... `;
+      consoleOut.innerHTML += `> Transacionando Pedido Comercial #${pedidoPayload.id_pedido} (${pedidoPayload.itens.length} itens)... `;
       
       try {
         const resposta = await fetch(AppState.apiUrl, {
@@ -850,7 +866,7 @@ function lerArquivoCSV(input) {
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             acao: "CRIAR_PEDIDO",
-            idPedidoManual: pedidoPayload.id_pedido, // Chave enviada para herdar o ID oficial do SAP
+            idPedidoManual: pedidoPayload.id_pedido, 
             usuario: pedidoPayload.usuario,
             itens: pedidoPayload.itens
           })
@@ -864,15 +880,16 @@ function lerArquivoCSV(input) {
           consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[REJEITADO]</span> -> ${resJson.mensagem}\n`;
         }
       } catch (err) {
-        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[ERRO DE COMUNICAÇÃO DE REDE]</span>\n`;
+        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[FALHA DE CONEXÃO HTTP]</span>\n`;
       }
     }
 
-    consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">> [PROCESSO EM LOTE ENCERRADO]</span>\n`;
+    consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">> [PROCESSO EM LOTE ENCERRADO] Tudo pronto!</span>\n`;
     if (typeof conectarNodoRegional === "function") {
       conectarNodoRegional(); 
     }
   };
+
   
   leitor.readAsText(arquivo);
 }
