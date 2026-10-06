@@ -768,8 +768,8 @@ function lerArquivoCSV(input) {
   leitor.onload = async function(e) {
     const textoBruto = e.target.result;
     
-    // CORREÇÃO: Expressão regular nativa e limpa para quebrar linhas sem estourar o interpretador
-    const linhasRaw = textoBruto.split(\(/\r\)?\n/);
+    // ✅ VERSÃO SANITIZADA E CORRETA:
+    const linhasRaw = textoBruto.split(/\r?\n/);
     
     const pedidosAgrupados = {};
     let errosSintaxe = [];
