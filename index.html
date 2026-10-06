@@ -792,10 +792,11 @@ function lerArquivoCSV(input) {
       
       // Validação baseada no novo leiaute de 9 colunas da sua planilha de faturamento
       if (cols && cols.length >= 8) {
-        const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B: PEDIDO
-        const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D: NOME FANTASIA
-        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F: CÓDIGO MATERIAL
-        const qtdBruto = cols[7] ? cols[7].toString().trim() : "";      // Coluna H: QTD
+        // CORREÇÃO CIRÚRGICA DOS ÍNDICES DE COLUNA:
+        const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B (Índice 1): PEDIDO
+        const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D (Índice 3): NOME FANTASIA
+        const skuBruto = cols[5] ? cols[5].toString().trim() : "";      // Coluna F (Índice 5): CÓDIGO MATERIAL
+        const qtdBruto = cols[7] ? cols[7].toString().trim() : "";      // Coluna H (Índice 7): QTD
 
         const skuLimpo = skuBruto.toUpperCase();
         const qtdLimpa = parseInt(qtdBruto, 10);
