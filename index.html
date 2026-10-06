@@ -751,7 +751,7 @@ function lerArquivoCSV(input) {
   consoleOut.style.display = "block";
   
   if (!input.files || input.files.length === 0) {
-    document.getElementById("consoleOut").innerHTML = `<span style="color: var(--error);">[ERRO] Nenhum arquivo foi selecionado.</span>\n`;
+    consoleOut.innerHTML = `<span style="color: var(--error);">[ERRO] Nenhum arquivo foi selecionado.</span>\n`;
     return;
   }
   
@@ -768,7 +768,7 @@ function lerArquivoCSV(input) {
     const textoBruto = e.target.result;
     const linhasRaw = textoBruto.split(\(/\r\)?\n/);
     
-    // Dicionário dinâmico em memória para agrupar múltiplos itens sob o mesmo ID de pedido
+    // Motor de Agrupamento por Pedido para o novo leiaute de 9 colunas
     const pedidosAgrupados = {};
     let errosSintaxe = [];
 
@@ -781,14 +781,14 @@ function lerArquivoCSV(input) {
     
     consoleOut.innerHTML += `> Separador estrutural detectado eletronicamente: [ ${separador} ]\n`;
 
-    // Varredura a partir da linha 1 (pula cabeçalho corporativo)
+    // Varredura a partir da linha 1 (pula a linha de títulos corporativos)
     for (let i = 1; i < linhasRaw.length; i++) {
       const linhaLimpa = linhasRaw[i].trim();
       if (!linhaLimpa) continue; 
 
       const cols = linhaLimpa.split(separador);
       
-      // Valida o comprimento baseado no novo leiaute de 9 colunas
+      // Validação estrita do novo formato: precisa ter os dados de Pedido, Loja, Código e Qtd
       if (cols && cols.length >= 8) {
         const idPedido = cols[1] ? cols[1].toString().trim() : "";      // Coluna B: PEDIDO
         const nomeLoja = cols[3] ? cols[3].toString().trim() : "";      // Coluna D: NOME FANTASIA
@@ -799,26 +799,26 @@ function lerArquivoCSV(input) {
         const qtdLimpa = parseInt(qtdBruto, 10);
 
         if (!idPedido || !skuLimpo || isNaN(qtdLimpa) || qtdLimpa <= 0) {
-          errosSintaxe.push(`Linha ${i + 1}: Dados inválidos (Pedido: "${idPedido}" | SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
+          errosSintaxe.push(`Linha ${i + 1}: Dados inconsistentes (Pedido: "${idPedido}" | SKU: "${skuBruto}" | Qtd: "${qtdBruto}")`);
           continue;
         }
 
-        // Agrupamento estrutural: se o pedido ainda não existe no mapa, inicializa o mestre
+        // Agrupamento lógico: Se o pedido ainda não existe no mapa, cria o cabeçalho mestre
         if (!pedidosAgrupados[idPedido]) {
           pedidosAgrupados[idPedido] = {
             id_pedido: idPedido,
-            usuario: nomeLoja || "Regional",
+            usuario: nomeLoja || "Uploader Lote",
             itens: []
           };
         }
 
-        // Anexa o sub-item à array interna do pedido correspondente
+        // Adiciona o item na lista do respectivo pedido
         pedidosAgrupados[idPedido].itens.push({
           sku: skuLimpo,
           quantidade: qtdLimpa
         });
       } else {
-        errosSintaxe.push(`Linha ${i + 1}: Linha fora do padrão estrutural do novo leiaute.`);
+        errosSintaxe.push(`Linha ${i + 1}: Estrutura de colunas inválida para o novo padrão.`);
       }
     }
 
@@ -833,11 +833,13 @@ function lerArquivoCSV(input) {
       return;
     }
 
-    consoleOut.innerHTML += `> Lote sanitizado. Enviando ${listaPedidosParaEnvio.length} pedido(s) mestre agrupado(s) de forma sequencial...\n`;
+    // Altera o log para refletir o número real de pedidos consolidados após o Group By
+    consoleOut.innerHTML += `> Lote sanitizado com sucesso! Agrupados ${listaPedidosParaEnvio.length} pedido(s) mestre(s) único(s).\n`;
+    consoleOut.innerHTML += `> Iniciando transmissão atômica sequencial para o banco distribuído...\n\n`;
     
-    // Processamento em lote sequencial respeitando o LockService concorrente do backend
+    // Executa o envio sequencial na esteira para o backend processar um por um com LockService
     for (const pedidoPayload of listaPedidosParaEnvio) {
-      consoleOut.innerHTML += `> Transacionando Pedido Comercial #${pedidoPayload.id_pedido}... `;
+      consoleOut.innerHTML += `> Enviando Pedido Comercial #${pedidoPayload.id_pedido} (${pedidoPayload.itens.length} itens)... `;
       
       try {
         const resposta = await fetch(AppState.apiUrl, {
@@ -847,7 +849,7 @@ function lerArquivoCSV(input) {
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             acao: "CRIAR_PEDIDO",
-            idPedidoManual: pedidoPayload.id_pedido, // Chave injetada para herdar o ID real do SAP/Relatório
+            idPedidoManual: pedidoPayload.id_pedido, // Passa o ID real do relatório (ex: 500000591)
             usuario: pedidoPayload.usuario,
             itens: pedidoPayload.itens
           })
@@ -856,17 +858,16 @@ function lerArquivoCSV(input) {
         const resJson = await resposta.json();
 
         if (resJson.sucesso) {
-          consoleOut.innerHTML += `<span style="color: var(--accent); font-weight: bold;">[SUCESSO]</span>\n`;
+          consoleOut.innerHTML += `<span style="color: var(--accent); font-weight: bold;">[CONCLUÍDO]</span>\n`;
         } else {
           consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[REJEITADO]</span> -> ${resJson.mensagem}\n`;
         }
       } catch (err) {
-        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[ERRO DE REDE]</span>\n`;
-        console.error("[CSV Loop Request Error]", err);
+        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[ERRO DE COMUNICAÇÃO]</span>\n`;
       }
     }
 
-    consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">> [PROCESSO CONCLUÍDO] Todos os lotes foram processados.</span>\n`;
+    consoleOut.innerHTML += `\n<span style="color: var(--accent); font-weight: bold;">> [PROCESSO CONCLUÍDO] Todos os lotes foram integrados.</span>\n`;
     if (typeof conectarNodoRegional === "function") {
       conectarNodoRegional(); 
     }
@@ -874,6 +875,7 @@ function lerArquivoCSV(input) {
   
   leitor.readAsText(arquivo);
 }
+
 
 
 
