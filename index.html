@@ -629,35 +629,47 @@
   };
 
 
-/**
- * Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
- */
-function atualizarComboboxEmpresasMestre() {
-  if (!AppState.iamConfigCache || !AppState.iamConfigCache.empresas) {
-    console.warn("[Aloca WEB IAM] Cache de configurações indisponível.");
-    return;
+  /**
+   * Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
+   * Regra de Negócio: Perfil "Geral" é exclusivo da TELEFONICA
+   */
+  function atualizarComboboxEmpresasMestre() {
+    if (!AppState.iamConfigCache || !AppState.iamConfigCache.empresas) {
+      console.warn("[Aloca WEB IAM] Cache de configurações mestre indisponível.");
+      return;
+    }
+    
+    const selectVinculo = document.getElementById("regVinculo");
+    const selectEmpresa = document.getElementById("regEmpresa");
+    
+    if (!selectVinculo || !selectEmpresa) return;
+
+    const nivelSelecionado = selectVinculo.value;
+
+    // Cenário 1: Se o usuário ainda não escolheu o nível de acesso
+    if (!nivelSelecionado) {
+      selectEmpresa.innerHTML = '<option value="" selected disabled>Aguardando nível de acesso...</option>';
+      return;
+    }
+
+    // ==========================================================================
+    // CORREÇÃO CIRÚRGICA: REGRA DE COMPLIANCE PARA O PERFIL GERAL (TELEFONICA)
+    // ==========================================================================
+    if (nivelSelecionado === "Geral") {
+      selectEmpresa.innerHTML = `
+        <option value="" disabled>Selecione a Empresa...</option>
+        <option value="TELEFONICA" selected>TELEFONICA</option>
+      `;
+      return;
+    }
+
+    // Cenário 3: Para Operador ou Solicitante, busca a lista dinâmica do cache
+    const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
+
+    selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
+      listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
   }
-  
-  const selectVinculo = document.getElementById("regVinculo");
-  const selectEmpresa = document.getElementById("regEmpresa");
-  
-  if (!selectVinculo || !selectEmpresa) return;
 
-  const nivelSelecionado = selectVinculo.value;
-
-  // Se o usuário ainda não escolheu o vínculo (ou voltou para o "Selecione...")
-  if (!nivelSelecionado) {
-    selectEmpresa.innerHTML = '<option value="" selected disabled>Aguardando nível de acesso...</option>';
-    return;
-  }
-
-  // Captura a array correspondente de dentro do objeto do cache
-  const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
-
-  // Monta dinamicamente a árvore de opções com base na escolha real do usuário
-  selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
-    listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
-}
 
 
   /**
