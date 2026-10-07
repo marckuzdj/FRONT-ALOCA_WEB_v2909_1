@@ -584,11 +584,12 @@
   }
 
   /**
-   * 8. Módulo do Operador: Consultas e Transições da Fila de Separação
+   * 7. Módulo do Operador: Consultas e Transições da Fila de Separação
    */
   async function buscarPedidosHoje() {
     const corpoFila = document.getElementById("fila-picking-corpo"); 
     if (!AppState.apiUrl) return;
+    
     try {
       const resposta = await fetch(AppState.apiUrl, { 
         method: "POST", 
@@ -596,27 +597,58 @@
         body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" }) 
       });
       const dadosHttp = await resposta.json();
+      
       if (dadosHttp.sucesso) {
         if (dadosHttp.dados.length === 0) { 
           corpoFila.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding:2rem;">Nenhum pedido pendente hoje.</td></tr>`; 
           return; 
         }
+        
         corpoFila.innerHTML = dadosHttp.dados.map(p => {
+          // MOTOR REATIVO DE TRATAMENTO DE HORÁRIO COM SEGUNDOS (PRECISÃO MÁXIMA)
+          let horaFormatada = "--:--:--";
+          if (p.timestamp_criacao) {
+            try {
+              const d = new Date(p.timestamp_criacao);
+              if (!isNaN(d.getTime())) {
+                // INCLUSÃO DOS SEGUNDOS NA FORMATAÇÃO NATIVA PT-BR
+                horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              } else {
+                // Fallback inteligente calibrado para capturar HH:MM:SS de strings brutas do Sheets
+                const correspondenciaHora = p.timestamp_criacao.match(/\d{2}:\d{2}:\d{2}/);
+                if (correspondenciaHora) {
+                  horaFormatada = correspondenciaHora[0];
+                } else {
+                  // Segundo fallback caso a string bruta tenha apenas minutos
+                  const correspondenciaMinuto = p.timestamp_criacao.match(/\d{2}:\d{2}/);
+                  if (correspondenciaMinuto) horaFormatada = correspondenciaMinuto[0] + ":00";
+                }
+              }
+            } catch(err) {
+              horaFormatada = "--:--:--";
+            }
+          }
+
           let botaoAcaoHtml = p.status === "Em Separação" 
             ? `<button disabled style="background:#f3f4f6; color:var(--text-muted); border:1px solid var(--border); cursor:not-allowed; opacity:0.7;">🔒 Em Separação</button>` 
             : `<button onclick="dispararOndaPicking('${p.id_pedido}', this)">Extrair Pedido</button>`;
+          
           return `
             <tr>
               <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
               <td>${p.usuario || "Regional"}</td>
-              <td>Acompanhar h</td>
+              <!-- Injeta dinamicamente a hora com segundos na tabela -->
+              <td><strong>${horaFormatada} h</strong></td>
               <td><span>${p.status}</span></td>
               <td>${botaoAcaoHtml}</td>
             </tr>`;
         }).join('');
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error("[Aloca WEB] Falha na renderização de horários:", err); 
+    }
   }
+
 
   async function dispararOndaPicking(idPedido, btn) {
     if (!confirm(`Deseja extrair o pedido ${idPedido}?`)) return;
