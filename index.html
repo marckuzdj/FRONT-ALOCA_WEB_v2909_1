@@ -233,6 +233,7 @@
         
         <div class="catalogo-tabela-scroll">
           <table>
+            
             <thead>
               <tr>
                 <th>SKU</th>
@@ -281,16 +282,21 @@
     
     <div class="tabela-operacional-scroll">
       <table style="margin-top: 0;">
-        <thead>
-          <tr>
-            <!-- Coluna de Seleção Geral -->
-            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selecionar-todos-picking" onchange="alternarTodosCheckboxesPicking(this)"></th>
-            <th>ID Pedido</th>
-            <th>Solicitante</th>
-            <th>Horário</th>
-            <th>Status</th>
-          </tr>
-        </thead>
+      <!-- Localize a table de view-separacao e ajuste o thead exatamente assim -->
+        
+      <thead>
+        <tr>
+          <th style="width: 40px; text-align: center;">
+            <input type="checkbox" id="selecionar-todos-picking" onchange="alternarTodosCheckboxesPicking(this)">
+          </th>
+          <th>ID Pedido</th>
+          <th>Solicitante</th>
+          <th>Destino</th> <!-- Nova coluna inserida -->
+          <th>Horário</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+
         <tbody id="fila-picking-corpo">
           <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
         </tbody>
@@ -623,14 +629,22 @@
             ? `<span>🔒</span>`
             : `<input type="checkbox" class="chk-pedido-picking" value="${p.id_pedido}" onchange="atualizarContadorSelecaoPicking()">`;
           
+          // Localize o bloco de retorno (return ` ... `) dentro do dadosHttp.dados.map na função buscarPedidosHoje e substitua por este:
           return `
             <tr id="linha_picking_${p.id_pedido}">
               <td style="text-align: center;">${checkboxHtml}</td>
               <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
-              <td>${p.usuario || "Regional"}</td>
+              
+              <!-- SOLICITANTE: Seu e-mail fixo de homologação do AppState -->
+              <td>${AppState.usuario}</td>
+              
+              <!-- DESTINO: O nome real da loja capturado dinamicamente do CSV corporativo -->
+              <td><strong>${p.usuario || "Regional"}</strong></td>
+              
               <td><strong>${horaFormatada} h</strong></td>
               <td><span id="status_label_${p.id_pedido}" style="font-weight: 500;">${p.status}</span></td>
             </tr>`;
+
         }).join('');
       }
     } catch (err) { console.error("[Aloca WEB] Erro na fila:", err); }
