@@ -584,11 +584,9 @@
       const resJson = await resposta.json();
       
       if (resJson.sucesso) {
-        AppState.iamConfigCache = resJson; // Guarda no estado global
+        AppState.iamConfigCache = resJson; // Guarda no estado global do AppState
 
-        // ==========================================================
-        // 🚀 CORREÇÃO CRUCIAL: ALIMENTA O COMBOBOX DA TELA DE LOGIN
-        // ==========================================================
+        // Alimenta o Combobox de UFs da tela de Login
         const loginSelectUf = document.getElementById("loginUfSelector");
         if (loginSelectUf) {
           loginSelectUf.innerHTML = '<option value="">Escolha a UF da Operação...</option>' + 
@@ -612,7 +610,7 @@
           `).join('');
         }
 
-        // Atualiza o Combobox de Empresas com base no "Nível de Acesso" inicial
+        // CORREÇÃO CRUCIAL: Força a atualização do Combobox de empresas passando o valor padrão inicial
         atualizarComboboxEmpresasMestre();
       } else {
         console.error("Erro de Governança: " + resJson.mensagem);
@@ -629,18 +627,32 @@
 
 
   /**
-   * 3. Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
+   * Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado (Group By Mestre)
    */
   function atualizarComboboxEmpresasMestre() {
-    if (!AppState.iamConfigCache) return;
+    // Se o cache da planilha mestre ainda não tiver chegado da API, aborta para não quebrar
+    if (!AppState.iamConfigCache || !AppState.iamConfigCache.empresas) {
+      console.warn("[Aloca WEB IAM] Cache de configurações indisponível para atualizar empresas.");
+      return;
+    }
     
-    const nivelSelecionado = document.getElementById("regVinculo").value;
+    const selectVinculo = document.getElementById("regVinculo");
     const selectEmpresa = document.getElementById("regEmpresa");
+    
+    if (!selectVinculo || !selectEmpresa) {
+      console.error("[Aloca WEB IAM] Elementos seletores de cadastro não localizados no HTML.");
+      return;
+    }
+
+    const nivelSelecionado = selectVinculo.value;
+    // Captura a array correspondente de dentro do objeto retornado pelo Apps Script
     const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
 
+    // Limpa o estado "Carregando..." anterior e monta a árvore dinâmica de opções
     selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
       listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
   }
+
 
   /**
    * 4. Motor de Submissão de Cadastro com Validação Completa de Compliance
