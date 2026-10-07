@@ -673,7 +673,7 @@
 
 
   /**
-   * 4. Motor de Submissão de Cadastro com Validação Completa de Compliance
+   * 4. Motor de Submissão de Cadastro com Validação de Token ADM para Perfil Geral
    */
   async function executarCadastroIAM(btn) {
     const nome = document.getElementById("regNome").value.trim();
@@ -683,23 +683,69 @@
     const senha = document.getElementById("regSenha").value;
     const senhaRepetida = document.getElementById("regSenhaRepetida").value;
     const ufAlvo = document.getElementById("regUf").value;
-    
-    // Captura as regionais marcadas no painel
     const regionaisMarcadas = Array.from(document.querySelectorAll(".chk-iam-regional:checked")).map(chk => chk.value);
 
-    // VALIDAÇÃO DE CAMPOS MANDATÓRIOS
+    // 1. Validação de campos obrigatórios
     if (!nome || !vinculo || !empresa || !email || !senha || !ufAlvo || regionaisMarcadas.length === 0) {
       alert("ERRO DE COMPLIANCE: Todos os campos do formulário e ao menos 1 Regional são obrigatórios!");
       return;
     }
 
-    if (senha !== "senhaRepetida") {
-      alert("Aviso: As senhas digitadas não coincidem. Corrija para prosseguir.");
+    if (senha !== senhaRepetida) {
+      alert("Aviso: As senhas digitadas não coincidem.");
       return;
     }
 
+    // Define o nível de privilégio inicial com base no preenchimento
+    let acessoNivel = "RESTRITO";
+
+    // ==========================================================================
+    // 🔒 PORTARIA DE SEGURANÇA: DESAFIO DO CÓDIGO REGISTRO ADM PARA PERFIL GERAL
+    // ==========================================================================
+    if (vinculo === "Geral") {
+      const codigoDigitado = prompt("🔒 PERFIL ADMINISTRADOR DETECTADO\n\nPor razões de segurança, insira o 'Código Registro ADM' para liberar o acesso total ao sistema:");
+      
+      if (!codigoDigitado) {
+        alert("Operação cancelada. O cadastro como Administrador Geral foi abortado.");
+        return;
+      }
+
+      // Trava visual inicial do botão
+      btn.disabled = true;
+      btn.innerHTML = "⏳ Autenticando Token ADM...";
+
+      try {
+        const urlGateway = EndpointsUFs[ufAlvo] || EndpointsUFs.SP;
+        const checaToken = await fetch(urlGateway, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ acao: "VALIDAR_TOKEN_ADM", token: codigoDigitado })
+        });
+        
+        const resToken = await checaToken.json();
+
+        if (!resToken.sucesso) {
+          alert(`[ACESSO NEGADO] ${resToken.mensagem}`);
+          btn.disabled = false;
+          btn.innerHTML = "🚀 Finalizar e Enviar Registro";
+          return; // Aborta o cadastro imediatamente
+        }
+        
+        // Se o token bateu no servidor, carimba o usuário como ADM legítimo
+        acessoNivel = "ADM";
+
+      } catch (err) {
+        alert("Erro de comunicação ao validar permissões de ADM.");
+        btn.disabled = false;
+        btn.innerHTML = "🚀 Finalizar e Enviar Registro";
+        return;
+      }
+    }
+
+    // Se passou pela portaria (ou for perfil restrito), prossegue com o envio do payload unificado
     btn.disabled = true;
-    btn.innerHTML = "⏳ Validando Regras Corporativas...";
+    btn.innerHTML = "⏳ Gravando Credenciais...";
 
     const payloadCadastro = {
       acao: "REGISTRAR_NOVO_USUARIO",
@@ -708,15 +754,12 @@
       empresa: empresa,
       email: email,
       senha: senha,
-      regionais: regionaisMarcadas.join(","), // Salva delimitado por vírgula como pedido
-      acesso: (vinculo === "Geral" || email.includes(".adm")) ? "ADM" : "RESTRITO" // Exemplo lógico de perfil ADM
+      regionais: regionaisMarcadas.join(","),
+      acesso: acessoNivel // Envia "ADM" para o Geral ou "RESTRITO" para os demais
     };
 
     try {
-      // Dispara o cadastro para o endpoint da UF escolhida pelo usuário
       const urlDestino = EndpointsUFs[ufAlvo];
-      if (!urlDestino) throw new Error("UF selecionada não possui uma API ativa cadastrada.");
-
       const resposta = await fetch(urlDestino, {
         method: "POST",
         mode: "cors",
@@ -729,12 +772,12 @@
 
       if (resJson.sucesso) {
         alert(resJson.mensagem);
-        alternarVisibilidadeIAM("login"); // Volta para a tela de login
+        alternarVisibilidadeIAM("login");
       } else {
         alert(`[CADASTRO REJEITADO] ${resJson.mensagem}`);
       }
     } catch (err) {
-      alert("Erro de comunicação ao registrar credencial de acesso: " + err.message);
+      alert("Erro ao registrar no banco local: " + err.message);
     } finally {
       btn.disabled = false;
       btn.innerHTML = "🚀 Finalizar e Enviar Registro";
