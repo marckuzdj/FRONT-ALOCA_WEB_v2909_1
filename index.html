@@ -785,9 +785,9 @@
   }
 
   /**
-   * 5. Motor de Validação de Login
+   * 5. Motor de Validação de Login com Autenticação Reativa de 2 Fatores (OTP via E-mail)
    */
-  async function executarLoginIAM(btn) {
+  async function executarLoginIAM(btn, otpForçado = "") {
     const ufTrabalho = document.getElementById("loginUfSelector").value;
     const email = document.getElementById("loginEmail").value.trim();
     const senha = document.getElementById("loginSenha").value;
@@ -798,7 +798,19 @@
     }
 
     btn.disabled = true;
-    btn.innerHTML = "⏳ Autenticando Credenciais...";
+    btn.innerHTML = otpForçado ? "⏳ Validando Código 2FA..." : "⏳ Autenticando Credenciais...";
+
+    // Prepara o objeto básico de transmissão
+    const payloadLogin = { 
+      acao: "EFETUAR_LOGIN_USUARIO", 
+      email: email, 
+      senha: senha 
+    };
+
+    // Se a função foi invocada na segunda perna do fluxo, anexa o código digitado
+    if (otpForçado) {
+      payloadLogin.otpDigitado = otpForçado;
+    }
 
     try {
       const urlDestino = EndpointsUFs[ufTrabalho];
@@ -807,38 +819,71 @@
         mode: "cors",
         redirect: "follow",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ acao: "EFETUAR_LOGIN_USUARIO", email: email, senha: senha })
+        body: JSON.stringify(payloadLogin)
       });
 
       const resJson = await resposta.json();
 
+      // ==========================================================================
+      // 🔒 INTERCEPTADOR 2FA: SEGUNDO FATOR DE AUTENTICAÇÃO ATIVADO
+      // ==========================================================================
+      if (!resJson.sucesso && resJson.primeiroAcesso) {
+        
+        // Abre a portaria eletrônica solicitando o token recebido em segundo plano
+        const otpDigitado = prompt(
+          "🔒 PRIMEIRO ACESSO DETECTADO\n\n" +
+          "Favor inserir o código OTP enviado ao e-mail cadastrado.\n\n" +
+          "⚠️ Verifique as Caixas de Entrada / SPAM / Lixo Eletrônico no seu gerenciador corporativo."
+        );
+
+        if (!otpDigitado) {
+          alert("Autenticação cancelada. O acesso seguro ao nó regional foi abortado.");
+          btn.disabled = false;
+          btn.innerHTML = "🔓 Autenticar e Entrar";
+          return;
+        }
+
+        // RECURSIVIDADE SEGURA: Invoca a si mesma injetando o OTP coletado na tela
+        executarLoginIAM(btn, otpDigitado);
+        return;
+      }
+
+      // ==========================================================================
+      // FLUXO DE ACESSO CONCLUÍDO E HOMOLOGADO (LOGIN COM SUCESSO)
+      // ==========================================================================
       if (resJson.sucesso) {
-        // Alimenta o estado global da aplicação com as permissões reais gravadas na planilha local
         AppState.uf = ufTrabalho;
         AppState.apiUrl = urlDestino;
         AppState.usuario = resJson.usuario.email;
-        AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; // Sua segmentação dinâmica baseada no vínculo
+        // Chaveia dinamicamente o segmento com base no vínculo de acesso real da planilha
+        AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; 
 
-        // Alinha o seletor visual de UFs do cabeçalho da SPA
-        document.getElementById("ufSelector").value = ufTrabalho;
+        // Sincroniza o seletor visual de UFs do cabeçalho
+        const headSelector = document.getElementById("ufSelector");
+        if (headSelector) headSelector.value = ufTrabalho;
 
-        // LIBERAÇÃO VISUAL: Esconde a tela de bloqueio do IAM e abre a SPA
-        document.getElementById("iam-tela-seguranca").style.style.display = "none";
+        // Libera o acesso ocultando a cortina preta de segurança
+        const telaSeguranca = document.getElementById("iam-tela-seguranca");
+        if (telaSeguranca) telaSeguranca.style.display = "none";
         
-        // Inicializa o catálogo reativo da UF autenticada
+        // Dispara a carga veloz de 110 itens do catálogo regional homologado
         conectarNodoRegional();
-        alert(`Bem-vindo, ${resJson.usuario.nome}! Acesso liberado para o perfil ${resJson.usuario.vinculo}.`);
+        
+        alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\nPerfil: ${resJson.usuario.vinculo} | Nível: ${resJson.usuario.acesso}`);
       } else {
         alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
       }
+
     } catch (err) {
       alert("Erro ao efetuar login na rede da UF: " + err.message);
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = "🔓 Autenticar e Entrar";
+      // Só destrava o botão se o fluxo não estiver aguardando recursividade
+      if (!otpForçado) {
+        btn.disabled = false;
+        btn.innerHTML = "🔓 Autenticar e Entrar";
+      }
     }
   }
-
 
   
   /**
