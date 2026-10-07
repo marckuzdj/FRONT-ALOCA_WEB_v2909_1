@@ -174,11 +174,193 @@
       from { transform: translateY(1rem); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+  /* ==========================================================================
+   6. ESTILOS DO MÓDULO IAM (LOGIN E CADASTRO)
+   ========================================================================== */
+.iam-container-bloqueio {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: var(--bg-main);
+  z-index: 5000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.iam-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: 6px solid var(--accent);
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
+}
+
+.iam-form-group {
+  margin-bottom: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.iam-form-group label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.iam-form-group input, .iam-form-group select {
+  width: 100%;
+  border-radius: 4px;
+}
+
+/* Painel de Seleção Múltipla de Regionais Nu-Style */
+.iam-regionais-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  padding: 0.8rem;
+  background: var(--bg-main);
+}
+
+.iam-regional-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.iam-regional-item input {
+  width: auto;
+  cursor: pointer;
+}
+
+.iam-switch-link {
+  color: var(--accent);
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+    
   </style>
 
 
 </head>
 <body>
+
+  <!-- MÓDULO DE AUTENTICAÇÃO E CADASTRO CENTRALIZADO (IAM) -->
+<div id="iam-tela-seguranca" class="iam-container-bloqueio">
+  
+  <!-- FORMULÁRIO 1: LOGIN -->
+  <div id="iam-card-login" class="iam-card">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <h2 style="font-weight: 900; letter-spacing: -0.5px;">ALOCA<span>.WEB</span></h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.3rem;">Insira suas credenciais corporativas para liberar o nó.</p>
+    </div>
+
+    <div class="iam-form-group">
+      <label>Selecionar UF de Trabalho</label>
+      <select id="loginUfSelector">
+        <option value="">Escolha a UF da Operação...</option>
+        <option value="SP">São Paulo (SP)</option>
+        <option value="RJ">Rio de Janeiro (RJ)</option>
+      </select>
+    </div>
+
+    <div class="iam-form-group">
+      <label>E-mail Corporativo</label>
+      <input type="email" id="loginEmail" placeholder="nome.sobrenome@empresa.com">
+    </div>
+
+    <div class="iam-form-group">
+      <label>Senha de Acesso</label>
+      <input type="password" id="loginSenha" placeholder="••••••••">
+    </div>
+
+    <button onclick="executarLoginIAM(this)" style="width: 100%; padding: 0.8rem; font-weight: bold; margin-top: 1rem; border-radius: 4px;">🔓 Autenticar e Entrar</button>
+    
+    <p style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+      Não possui uma credencial ativa? <span class="iam-switch-link" onclick="alternarVisibilidadeIAM('registro')">Criar Conta</span>
+    </p>
+  </div>
+
+  <!-- FORMULÁRIO 2: REGISTRO DE NOVO USUÁRIO -->
+  <div id="iam-card-registro" class="iam-card" style="display: none; max-width: 500px;">
+    <div style="margin-bottom: 1.5rem;">
+      <h3 style="font-weight: 900;">// SOLICITAR ACESSO CORPORATIVO</h3>
+      <p style="color: var(--text-muted); font-size: 0.85rem;">Preencha os campos de compliance para alocação de cota.</p>
+    </div>
+
+    <div class="iam-form-group">
+      <label>Nome Completo</label>
+      <input type="text" id="regNome" placeholder="Nome do Colaborador">
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="iam-form-group">
+        <label>Nível de Acesso</label>
+        <select id="regVinculo" onchange="atualizarComboboxEmpresasMestre()">
+          <option value="Solicitante">Solicitante</option>
+          <option value="Operador">Operador</option>
+          <option value="Geral">Geral</option>
+        </select>
+      </div>
+      <div class="iam-form-group">
+        <label>Empresa Vinculada</label>
+        <select id="regEmpresa">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="iam-form-group">
+      <label>E-mail Corporativo</label>
+      <input type="email" id="regEmail" placeholder="usuario@dominio.com">
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="iam-form-group">
+        <label>Criar Senha</label>
+        <input type="password" id="regSenha" placeholder="Senha Forte">
+      </div>
+      <div class="iam-form-group">
+        <label>Repetir Senha</label>
+        <input type="password" id="regSenhaRepetida" placeholder="Confirme a Senha">
+      </div>
+    </div>
+
+    <div class="iam-form-group">
+      <label>UF Principal (Banco Local)</label>
+      <select id="regUf">
+        <option value="">Carregando UFs...</option>
+      </select>
+    </div>
+
+    <div class="iam-form-group">
+      <label>Regionais / Stocks Autorizados (Selecione ao menos 1)</label>
+      <div id="regRegionaisPainel" class="iam-regionais-grid">
+        <!-- Injeção dinâmica de checkboxes via API Config Mestre -->
+        <span style="color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem;">Aguardando tabelas mestre...</span>
+      </div>
+    </div>
+
+    <button onclick="executarCadastroIAM(this)" style="width: 100%; padding: 0.8rem; font-weight: bold; margin-top: 0.5rem; background: #111111; color: white; border-radius: 4px;">🚀 Finalizar e Enviar Registro</button>
+    
+    <p style="margin-top: 1.2rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+      Já possui cadastro homologado? <span class="iam-switch-link" onclick="alternarVisibilidadeIAM('login')">Voltar ao Login</span>
+    </p>
+  </div>
+
+</div>
 
   <header>
     <div class="logo">ALOCA<span>.WEB</span> <small style="font-size:0.8rem; color:var(--text-muted)">// EXT-SPA</small></div>
@@ -357,6 +539,214 @@
     produtosBackup: []
   };
 
+  // Extensão de Cache Local para as configurações do IAM
+  AppState.iamConfigCache = null;
+
+  /**
+   * 1. Controle de Alternância de Cards (Login / Registro)
+   */
+  function alternarVisibilidadeIAM(tela) {
+    const cardLogin = document.getElementById("iam-card-login");
+    const cardRegistro = document.getElementById("iam-card-registro");
+    
+    if (tela === "registro") {
+      cardLogin.style.display = "none";
+      cardRegistro.style.display = "block";
+      // Carrega os dados da Planilha Mestre AlocaWEB_Config se ainda não estiverem em cache
+      carregarConfiguracoesIniciaisIAM();
+    } else {
+      cardLogin.style.display = "block";
+      cardRegistro.style.display = "none";
+    }
+  }
+
+  /**
+   * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
+   */
+  async function carregarConfiguracoesIniciaisIAM() {
+    if (AppState.iamConfigCache) return; // Evita múltiplas chamadas desnecessárias
+
+    // Usa temporariamente o endpoint de SP como Gateway para acessar a planilha mestre
+    const urlGateway = EndpointsUFs.SP; 
+    
+    try {
+      const resposta = await fetch(urlGateway, {
+        method: "POST",
+        mode: "cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ acao: "OBTER_CONFIGURACOES_CADASTRO" })
+      });
+      
+      const resJson = await resposta.json();
+      
+      if (resJson.sucesso) {
+        AppState.iamConfigCache = resJson; // Salva no cache local do AppState
+        
+        // A. Alimenta o Combobox de UFs
+        const selectUf = document.getElementById("regUf");
+        selectUf.innerHTML = '<option value="">Selecione a UF Principal...</option>' + 
+          resJson.ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+
+        // B. Alimenta o Painel de Checkboxes de Regionais / Stocks
+        const painelRegionais = document.getElementById("regRegionaisPainel");
+        painelRegionais.innerHTML = resJson.regionais.map(reg => `
+          <label class="iam-regional-item">
+            <input type="checkbox" class="chk-iam-regional" value="${reg}"> ${reg}
+          </label>
+        `).join('');
+
+        // C. Atualiza o Combobox de Empresas com base no "Nível de Acesso" inicial (Solicitante)
+        atualizarComboboxEmpresasMestre();
+      } else {
+        alert("Erro de Governança: " + resJson.mensagem);
+      }
+    } catch (err) {
+      console.error("[IAM Config Error]", err);
+      alert("Falha crítica ao conectar com a planilha mestre de configurações.");
+    }
+  }
+
+  /**
+   * 3. Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
+   */
+  function atualizarComboboxEmpresasMestre() {
+    if (!AppState.iamConfigCache) return;
+    
+    const nivelSelecionado = document.getElementById("regVinculo").value;
+    const selectEmpresa = document.getElementById("regEmpresa");
+    const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
+
+    selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
+      listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
+  }
+
+  /**
+   * 4. Motor de Submissão de Cadastro com Validação Completa de Compliance
+   */
+  async function executarCadastroIAM(btn) {
+    const nome = document.getElementById("regNome").value.trim();
+    const vinculo = document.getElementById("regVinculo").value;
+    const empresa = document.getElementById("regEmpresa").value;
+    const email = document.getElementById("regEmail").value.trim();
+    const senha = document.getElementById("regSenha").value;
+    const senhaRepetida = document.getElementById("regSenhaRepetida").value;
+    const ufAlvo = document.getElementById("regUf").value;
+    
+    // Captura as regionais marcadas no painel
+    const regionaisMarcadas = Array.from(document.querySelectorAll(".chk-iam-regional:checked")).map(chk => chk.value);
+
+    // VALIDAÇÃO DE CAMPOS MANDATÓRIOS
+    if (!nome || !vinculo || !empresa || !email || !senha || !ufAlvo || regionaisMarcadas.length === 0) {
+      alert("ERRO DE COMPLIANCE: Todos os campos do formulário e ao menos 1 Regional são obrigatórios!");
+      return;
+    }
+
+    if (senha !== "senhaRepetida") {
+      alert("Aviso: As senhas digitadas não coincidem. Corrija para prosseguir.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Validando Regras Corporativas...";
+
+    const payloadCadastro = {
+      acao: "REGISTRAR_NOVO_USUARIO",
+      nome: nome,
+      vinculo: vinculo,
+      empresa: empresa,
+      email: email,
+      senha: senha,
+      regionais: regionaisMarcadas.join(","), // Salva delimitado por vírgula como pedido
+      acesso: (vinculo === "Geral" || email.includes(".adm")) ? "ADM" : "RESTRITO" // Exemplo lógico de perfil ADM
+    };
+
+    try {
+      // Dispara o cadastro para o endpoint da UF escolhida pelo usuário
+      const urlDestino = EndpointsUFs[ufAlvo];
+      if (!urlDestino) throw new Error("UF selecionada não possui uma API ativa cadastrada.");
+
+      const resposta = await fetch(urlDestino, {
+        method: "POST",
+        mode: "cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payloadCadastro)
+      });
+
+      const resJson = await resposta.json();
+
+      if (resJson.sucesso) {
+        alert(resJson.mensagem);
+        alternarVisibilidadeIAM("login"); // Volta para a tela de login
+      } else {
+        alert(`[CADASTRO REJEITADO] ${resJson.mensagem}`);
+      }
+    } catch (err) {
+      alert("Erro de comunicação ao registrar credencial de acesso: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "🚀 Finalizar e Enviar Registro";
+    }
+  }
+
+  /**
+   * 5. Motor de Validação de Login
+   */
+  async function executarLoginIAM(btn) {
+    const ufTrabalho = document.getElementById("loginUfSelector").value;
+    const email = document.getElementById("loginEmail").value.trim();
+    const senha = document.getElementById("loginSenha").value;
+
+    if (!ufTrabalho || !email || !senha) {
+      alert("Preencha a UF, e-mail e senha para realizar o login.");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Autenticando Credenciais...";
+
+    try {
+      const urlDestino = EndpointsUFs[ufTrabalho];
+      const resposta = await fetch(urlDestino, {
+        method: "POST",
+        mode: "cors",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ acao: "EFETUAR_LOGIN_USUARIO", email: email, senha: senha })
+      });
+
+      const resJson = await resposta.json();
+
+      if (resJson.sucesso) {
+        // Alimenta o estado global da aplicação com as permissões reais gravadas na planilha local
+        AppState.uf = ufTrabalho;
+        AppState.apiUrl = urlDestino;
+        AppState.usuario = resJson.usuario.email;
+        AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; // Sua segmentação dinâmica baseada no vínculo
+
+        // Alinha o seletor visual de UFs do cabeçalho da SPA
+        document.getElementById("ufSelector").value = ufTrabalho;
+
+        // LIBERAÇÃO VISUAL: Esconde a tela de bloqueio do IAM e abre a SPA
+        document.getElementById("iam-tela-seguranca").style.style.display = "none";
+        
+        // Inicializa o catálogo reativo da UF autenticada
+        conectarNodoRegional();
+        alert(`Bem-vindo, ${resJson.usuario.nome}! Acesso liberado para o perfil ${resJson.usuario.vinculo}.`);
+      } else {
+        alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
+      }
+    } catch (err) {
+      alert("Erro ao efetuar login na rede da UF: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = "🔓 Autenticar e Entrar";
+    }
+  }
+
+
+  
   /**
    * 1. Sistema de Navegação SPA Blindado
    */
