@@ -767,7 +767,9 @@ function lerArquivoCSV(input) {
   const leitor = new FileReader();
   leitor.onload = async function(e) {
     const textoBruto = e.target.result;
-    const linhasRaw = textoBruto.split(\(/\r\)?\n/);
+    
+    // ✅ COLE ESTA VERSÃO CORRETA E HOMOLOGADA:
+    const linhasRaw = textoBruto.split(/\r?\n/);
     
     const pedidosAgrupados = {};
     let errosSintaxe = [];
