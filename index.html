@@ -305,14 +305,17 @@
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <!-- Localize o regVinculo e substitua exatamente por este bloco -->
       <div class="iam-form-group">
         <label>Nível de Acesso</label>
         <select id="regVinculo" onchange="atualizarComboboxEmpresasMestre()">
+          <option value="" selected disabled>Selecione...</option>
           <option value="Solicitante">Solicitante</option>
           <option value="Operador">Operador</option>
           <option value="Geral">Geral</option>
         </select>
       </div>
+
       <div class="iam-form-group">
         <label>Empresa Vinculada</label>
         <select id="regEmpresa">
@@ -626,32 +629,35 @@
   };
 
 
-  /**
-   * Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado (Group By Mestre)
-   */
-  function atualizarComboboxEmpresasMestre() {
-    // Se o cache da planilha mestre ainda não tiver chegado da API, aborta para não quebrar
-    if (!AppState.iamConfigCache || !AppState.iamConfigCache.empresas) {
-      console.warn("[Aloca WEB IAM] Cache de configurações indisponível para atualizar empresas.");
-      return;
-    }
-    
-    const selectVinculo = document.getElementById("regVinculo");
-    const selectEmpresa = document.getElementById("regEmpresa");
-    
-    if (!selectVinculo || !selectEmpresa) {
-      console.error("[Aloca WEB IAM] Elementos seletores de cadastro não localizados no HTML.");
-      return;
-    }
-
-    const nivelSelecionado = selectVinculo.value;
-    // Captura a array correspondente de dentro do objeto retornado pelo Apps Script
-    const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
-
-    // Limpa o estado "Carregando..." anterior e monta a árvore dinâmica de opções
-    selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
-      listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
+/**
+ * Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
+ */
+function atualizarComboboxEmpresasMestre() {
+  if (!AppState.iamConfigCache || !AppState.iamConfigCache.empresas) {
+    console.warn("[Aloca WEB IAM] Cache de configurações indisponível.");
+    return;
   }
+  
+  const selectVinculo = document.getElementById("regVinculo");
+  const selectEmpresa = document.getElementById("regEmpresa");
+  
+  if (!selectVinculo || !selectEmpresa) return;
+
+  const nivelSelecionado = selectVinculo.value;
+
+  // Se o usuário ainda não escolheu o vínculo (ou voltou para o "Selecione...")
+  if (!nivelSelecionado) {
+    selectEmpresa.innerHTML = '<option value="" selected disabled>Aguardando nível de acesso...</option>';
+    return;
+  }
+
+  // Captura a array correspondente de dentro do objeto do cache
+  const listaEmpresas = AppState.iamConfigCache.empresas[nivelSelecionado] || [];
+
+  // Monta dinamicamente a árvore de opções com base na escolha real do usuário
+  selectEmpresa.innerHTML = '<option value="">Selecione a Empresa...</option>' +
+    listaEmpresas.map(emp => `<option value="${emp}">${emp}</option>`).join('');
+}
 
 
   /**
