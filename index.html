@@ -262,36 +262,43 @@
     <div id="consoleOut" class="console" style="display:none"></div>
   </div>
 
-  <!-- Tela 3: Módulo do Operador (Separação Fila Ativa) -->
-  <div id="view-separacao" class="view">
-    <div class="tabela-operacional-wrapper">
-      <div class="tabela-operacional-topo">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2>Fila Ativa de Separação e Picking</h2>
-            <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
-          </div>
+<!-- Localize a div view-separacao e substitua por esta estrutura refinada -->
+<div id="view-separacao" class="view">
+  <div class="tabela-operacional-wrapper">
+    <div class="tabela-operacional-topo">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>Fila Ativa de Separação e Picking</h2>
+          <p style="color: var(--text-muted); margin-top: 0.2rem;">Pedidos recebidos hoje aguardando triagem, corte e romaneio físico.</p>
+        </div>
+        <!-- BOTÕES OPERACIONAIS DE TOPO -->
+        <div style="display: flex; gap: 1rem;">
+          <button id="btn-processar-massa" onclick="processarOndaPickingEmMassa(this)" style="background: var(--accent); color: white; padding: 0.5rem 1rem; font-weight: bold; border-radius: 4px; display: none;">🔒 Iniciar Separação em Lote (<span id="massa-contador">0</span>)</button>
           <button onclick="buscarPedidosHoje()" style="background: var(--text); color: var(--bg-surface); padding: 0.5rem 1rem;">🔄 Atualizar Fila</button>
         </div>
       </div>
-      <div class="tabela-operacional-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>ID Pedido</th>
-              <th>Solicitante</th>
-              <th>Horário</th>
-              <th>Status</th>
-              <th>Ações Operacionais</th>
-            </tr>
-          </thead>
-          <tbody id="fila-picking-corpo">
-            <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
-          </tbody>
-        </table>
-      </div>
+    </div>
+    
+    <div class="tabela-operacional-scroll">
+      <table style="margin-top: 0;">
+        <thead>
+          <tr>
+            <!-- Coluna de Seleção Geral -->
+            <th style="width: 40px; text-align: center;"><input type="checkbox" id="selecionar-todos-picking" onchange="alternarTodosCheckboxesPicking(this)"></th>
+            <th>ID Pedido</th>
+            <th>Solicitante</th>
+            <th>Horário</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="fila-picking-corpo">
+          <tr><td colspan="5" style="color:var(--text-muted); text-align: center; padding: 2rem;">Selecione uma UF ativa para carregar a fila de corte...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
+</div>
+
 
   <!-- Tela 4: Módulo Contábil (Faturamento e Expedição RPA) -->
   <div id="view-faturamento" class="view">
@@ -584,18 +591,16 @@
   }
 
   /**
-   * 7. Módulo do Operador: Consultas e Transições da Fila de Separação
+   * 7. Módulo do Operador: Triagem e Processamento de Picking em Massa com Resiliência
    */
   async function buscarPedidosHoje() {
     const corpoFila = document.getElementById("fila-picking-corpo"); 
-    if (!AppState.apiUrl) return;
+    const btnMassa = document.getElementById("btn-processar-massa");
+    if (btnMassa) btnMassa.style.display = "none"; // Oculta o botão mestre ao atualizar
     
+    if (!AppState.apiUrl) return;
     try {
-      const resposta = await fetch(AppState.apiUrl, { 
-        method: "POST", 
-        headers: { "Content-Type": "text/plain" }, 
-        body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" }) 
-      });
+      const resposta = await fetch(AppState.apiUrl, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ acao: "BUSCAR_PEDIDOS_HOJE" }) });
       const dadosHttp = await resposta.json();
       
       if (dadosHttp.sucesso) {
@@ -605,74 +610,124 @@
         }
         
         corpoFila.innerHTML = dadosHttp.dados.map(p => {
-          // MOTOR REATIVO DE TRATAMENTO DE HORÁRIO COM SEGUNDOS (PRECISÃO MÁXIMA)
           let horaFormatada = "--:--:--";
           if (p.timestamp_criacao) {
             try {
               const d = new Date(p.timestamp_criacao);
-              if (!isNaN(d.getTime())) {
-                // INCLUSÃO DOS SEGUNDOS NA FORMATAÇÃO NATIVA PT-BR
-                horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              } else {
-                // Fallback inteligente calibrado para capturar HH:MM:SS de strings brutas do Sheets
-                const correspondenciaHora = p.timestamp_criacao.match(/\d{2}:\d{2}:\d{2}/);
-                if (correspondenciaHora) {
-                  horaFormatada = correspondenciaHora[0];
-                } else {
-                  // Segundo fallback caso a string bruta tenha apenas minutos
-                  const correspondenciaMinuto = p.timestamp_criacao.match(/\d{2}:\d{2}/);
-                  if (correspondenciaMinuto) horaFormatada = correspondenciaMinuto[0] + ":00";
-                }
-              }
-            } catch(err) {
-              horaFormatada = "--:--:--";
-            }
+              if (!isNaN(d.getTime())) horaFormatada = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            } catch(e) { horaFormatada = "--:--:--"; }
           }
 
-          let botaoAcaoHtml = p.status === "Em Separação" 
-            ? `<button disabled style="background:#f3f4f6; color:var(--text-muted); border:1px solid var(--border); cursor:not-allowed; opacity:0.7;">🔒 Em Separação</button>` 
-            : `<button onclick="dispararOndaPicking('${p.id_pedido}', this)">Extrair Pedido</button>`;
+          // Se já estiver em separação, bloqueia a caixa de seleção com cadeado
+          let checkboxHtml = p.status === "Em Separação"
+            ? `<span>🔒</span>`
+            : `<input type="checkbox" class="chk-pedido-picking" value="${p.id_pedido}" onchange="atualizarContadorSelecaoPicking()">`;
           
           return `
-            <tr>
+            <tr id="linha_picking_${p.id_pedido}">
+              <td style="text-align: center;">${checkboxHtml}</td>
               <td><a href="#" onclick="abrirModalDetalhes('${p.id_pedido}'); return false;" style="color: var(--accent); font-weight: bold; text-decoration: underline;">${p.id_pedido}</a></td>
               <td>${p.usuario || "Regional"}</td>
-              <!-- Injeta dinamicamente a hora com segundos na tabela -->
               <td><strong>${horaFormatada} h</strong></td>
-              <td><span>${p.status}</span></td>
-              <td>${botaoAcaoHtml}</td>
+              <td><span id="status_label_${p.id_pedido}" style="font-weight: 500;">${p.status}</span></td>
             </tr>`;
         }).join('');
       }
-    } catch (err) { 
-      console.error("[Aloca WEB] Falha na renderização de horários:", err); 
+    } catch (err) { console.error("[Aloca WEB] Erro na fila:", err); }
+  }
+
+  // Manipuladores de estado das caixas de seleção
+  function alternarTodosCheckboxesPicking(master) {
+    document.querySelectorAll(".chk-pedido-picking").forEach(chk => chk.checked = master.checked);
+    atualizarContadorSelecaoPicking();
+  }
+
+  function atualizarContadorSelecaoPicking() {
+    const marcados = document.querySelectorAll(".chk-pedido-picking:checked").length;
+    const btnMassa = document.getElementById("btn-processar-massa");
+    const contador = document.getElementById("massa-contador");
+    
+    if (marcados > 0) {
+      btnMassa.style.display = "block";
+      contador.innerText = marcados;
+    } else {
+      btnMassa.style.display = "none";
     }
   }
 
+  /**
+   * MOTOR DE RESILIÊNCIA EM MASSA: Processa sequencialmente as caixas com delay de alívio anti-CORS
+   */
+  async function processarOndaPickingEmMassa(btnMestre) {
+    const selecionados = Array.from(document.querySelectorAll(".chk-pedido-picking:checked")).map(chk => chk.value);
+    if (selecionados.length === 0) return;
+    if (!confirm(`Confirma mover os ${selecionados.length} pedidos selecionados para "Em Separação" simultaneamente?`)) return;
 
-  async function dispararOndaPicking(idPedido, btn) {
-    if (!confirm(`Deseja extrair o pedido ${idPedido}?`)) return;
-    btn.disabled = true; 
-    btn.innerHTML = "⏳ Processando...";
-    try {
-      const resposta = await fetch(AppState.apiUrl, { 
-        method: "POST", 
-        mode: "cors", 
-        redirect: "follow", 
-        headers: { "Content-Type": "text/plain" }, 
-        body: JSON.stringify({ acao: "MUDAR_STATUS_OPERADOR", subAcao: "EXTRAIR_PARA_SEPARACAO", idPedido: idPedido, usuario: AppState.usuario }) 
-      });
-      const resJson = await resposta.json();
-      if (resJson.sucesso) { 
-        alert(resJson.mensagem); 
-        buscarPedidosHoje(); 
+    btnMestre.disabled = true;
+    const textoOriginal = btnMestre.innerHTML;
+
+    for (let idx = 0; idx < selecionados.length; idx++) {
+      const idPedido = selecionados[idx];
+      const statusLabel = document.getElementById(`status_label_${idPedido}`);
+      
+      let tentativaAtual = 0;
+      const maxTentativas = 3;
+      let sucessoTransacao = false;
+
+      if (statusLabel) statusLabel.innerHTML = `⏳ Conectando...`;
+
+      while (tentativaAtual < maxTentativas && !sucessoTransacao) {
+        tentativaAtual++;
+        if (tentativaAtual > 1) {
+          if (statusLabel) statusLabel.innerHTML = `⚠️ Re-tentando [${tentativaAtual}/${maxTentativas}]...`;
+          await new Promise(resolve => setTimeout(resolve, 1200)); // Delay de alívio anti-CORS
+        }
+
+        try {
+          const resposta = await fetch(AppState.apiUrl, {
+            method: "POST",
+            mode: "cors",
+            redirect: "follow",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+              acao: "MUDAR_STATUS_OPERADOR",
+              subAcao: "EXTRAIR_PARA_SEPARACAO",
+              idPedido: idPedido,
+              usuario: AppState.usuario
+            })
+          });
+
+          if (resposta.ok) {
+            const resJson = await resposta.json();
+            if (resJson.sucesso) {
+              if (statusLabel) statusLabel.innerHTML = `<span style="color:var(--accent);">🔒 Em Separação</span>`;
+              // Localiza a linha e substitui a caixa de seleção pelo cadeado visual
+              const tdCheck = document.querySelector(`#linha_picking_${idPedido} td:first-child`);
+              if (tdCheck) tdCheck.innerHTML = `<span>🔒</span>`;
+              sucessoTransacao = true;
+            } else {
+              if (statusLabel) statusLabel.innerHTML = `<span style="color:var(--error);">${resJson.mensagem}</span>`;
+              sucessoTransacao = true;
+            }
+          }
+        } catch (err) {
+          console.warn(`[Picking Massa] Erro na tentativa ${tentativaAtual} do pedido ${idPedido}`);
+          if (tentativaAtual === maxTentativas && statusLabel) {
+            statusLabel.innerHTML = `<span style="color:var(--error);">❌ Erro de Conexão</span>`;
+          }
+        }
       }
-    } catch (err) { 
-      alert("Erro ao extrair."); 
-      btn.disabled = false; 
-      btn.innerHTML = "Extrair Pedido"; 
     }
+
+    // Reseta o estado do botão mestre e limpa seletores
+    btnMestre.disabled = false;
+    btnMestre.style.display = "none";
+    const chkMaster = document.getElementById("selecionar-todos-picking");
+    if (chkMaster) chkMaster.checked = false;
+    alert("Processamento da onda de picking em massa concluído com sucesso!");
+    buscarPedidosHoje(); // Atualiza a fila completa de forma limpa
   }
+
 
   /**
    * 9. Módulo Contábil: Faturamento e Despacho RPA
