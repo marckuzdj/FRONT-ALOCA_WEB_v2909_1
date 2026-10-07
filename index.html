@@ -267,12 +267,11 @@
       <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.3rem;">Insira suas credenciais corporativas para liberar o nó.</p>
     </div>
 
+    <!-- Localize o loginUfSelector e substitua por esta linha limpa -->
     <div class="iam-form-group">
       <label>Selecionar UF de Trabalho</label>
       <select id="loginUfSelector">
-        <option value="">Escolha a UF da Operação...</option>
-        <option value="SP">São Paulo (SP)</option>
-        <option value="RJ">Rio de Janeiro (RJ)</option>
+        <option value="">Carregando UFs operacionais...</option>
       </select>
     </div>
 
@@ -563,10 +562,14 @@
   /**
    * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
    */
+  /**
+   * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
+   * Alimenta dinamicamente tanto a tela de Login quanto a de Registro
+   */
   async function carregarConfiguracoesIniciaisIAM() {
-    if (AppState.iamConfigCache) return; // Evita múltiplas chamadas desnecessárias
+    if (AppState.iamConfigCache) return; // Evita requisições duplicadas se já estiver em cache
 
-    // Usa temporariamente o endpoint de SP como Gateway para acessar a planilha mestre
+    // Usa o endpoint estável de SP como Gateway para acessar a planilha mestre AlocaWEB_Config
     const urlGateway = EndpointsUFs.SP; 
     
     try {
@@ -581,31 +584,49 @@
       const resJson = await resposta.json();
       
       if (resJson.sucesso) {
-        AppState.iamConfigCache = resJson; // Salva no cache local do AppState
+        AppState.iamConfigCache = resJson; // Guarda no estado global
+
+        // ==========================================================
+        // 🚀 CORREÇÃO CRUCIAL: ALIMENTA O COMBOBOX DA TELA DE LOGIN
+        // ==========================================================
+        const loginSelectUf = document.getElementById("loginUfSelector");
+        if (loginSelectUf) {
+          loginSelectUf.innerHTML = '<option value="">Escolha a UF da Operação...</option>' + 
+            resJson.ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+        }
         
-        // A. Alimenta o Combobox de UFs
-        const selectUf = document.getElementById("regUf");
-        selectUf.innerHTML = '<option value="">Selecione a UF Principal...</option>' + 
-          resJson.ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+        // Alimenta o Combobox de UFs da tela de Registro
+        const regSelectUf = document.getElementById("regUf");
+        if (regSelectUf) {
+          regSelectUf.innerHTML = '<option value="">Selecione a UF Principal...</option>' + 
+            resJson.ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+        }
 
-        // B. Alimenta o Painel de Checkboxes de Regionais / Stocks
+        // Alimenta o Painel de Checkboxes de Regionais / Stocks da tela de Registro
         const painelRegionais = document.getElementById("regRegionaisPainel");
-        painelRegionais.innerHTML = resJson.regionais.map(reg => `
-          <label class="iam-regional-item">
-            <input type="checkbox" class="chk-iam-regional" value="${reg}"> ${reg}
-          </label>
-        `).join('');
+        if (painelRegionais) {
+          painelRegionais.innerHTML = resJson.regionais.map(reg => `
+            <label class="iam-regional-item">
+              <input type="checkbox" class="chk-iam-regional" value="${reg}"> ${reg}
+            </label>
+          `).join('');
+        }
 
-        // C. Atualiza o Combobox de Empresas com base no "Nível de Acesso" inicial (Solicitante)
+        // Atualiza o Combobox de Empresas com base no "Nível de Acesso" inicial
         atualizarComboboxEmpresasMestre();
       } else {
-        alert("Erro de Governança: " + resJson.mensagem);
+        console.error("Erro de Governança: " + resJson.mensagem);
       }
     } catch (err) {
       console.error("[IAM Config Error]", err);
-      alert("Falha crítica ao conectar com a planilha mestre de configurações.");
     }
   }
+
+  // GATILHO COMPLIANCE: Dispara a carga de UFs mestre automaticamente na abertura da SPA
+  window.onload = function() {
+    carregarConfiguracoesIniciaisIAM();
+  };
+
 
   /**
    * 3. Filtra dinamicamente as Empresas de acordo com o Nível de Acesso Selecionado
