@@ -889,32 +889,57 @@ function lerArquivoCSV(input) {
     consoleOut.innerHTML += `> Lote sanitizado! Consolidados ${listaPedidosParaEnvio.length} pedido(s) mestre(s) único(s) após agrupamento regional.\n`;
     consoleOut.innerHTML += `> Iniciando integração atômica sequencial via API Gateway...\n\n`;
     
+    // PROCESSAMENTO EM LOTE COM ESTEIRA DE RESILIÊNCIA E RETRY
     for (const pedidoPayload of listaPedidosParaEnvio) {
-      consoleOut.innerHTML += `> Transacionando Pedido Comercial #${pedidoPayload.id_pedido} (${pedidoPayload.itens.length} itens)... `;
-      
-      try {
-        const resposta = await fetch(AppState.apiUrl, {
-          method: "POST",
-          mode: "cors",
-          redirect: "follow",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({
-            acao: "CRIAR_PEDIDO",
-            idPedidoManual: pedidoPayload.id_pedido, 
-            usuario: pedidoPayload.usuario,
-            itens: pedidoPayload.itens
-          })
-        });
-        
-        const resJson = await resposta.json();
+      let tentativaAtual = 0;
+      const maxTentativas = 3;
+      let sucessoTransacao = false;
 
-        if (resJson.sucesso) {
-          consoleOut.innerHTML += `<span style="color: var(--accent); font-weight: bold;">[CONCLUÍDO]</span>\n`;
+      while (tentativaAtual < maxTentativas && !sucessoTransacao) {
+        tentativaAtual++;
+        
+        if (tentativaAtual === 1) {
+          consoleOut.innerHTML += `> Transacionando Pedido Comercial #${pedidoPayload.id_pedido} (${pedidoPayload.itens.length} itens)... `;
         } else {
-          consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[REJEITADO]</span> -> ${resJson.mensagem}\n`;
+          consoleOut.innerHTML += `⚠️ [Re-tentando #${pedidoPayload.id_pedido} - Lote ${tentativaAtual}/${maxTentativas}] Conectando... `;
+          // Delay de Alívio: Aguarda 1.2 segundos para o servidor do Google liberar travas antigas de memória
+          await new Promise(resolve => setTimeout(resolve, 1200));
         }
-      } catch (err) {
-        consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[FALHA DE CONEXÃO HTTP]</span>\n`;
+
+        try {
+          const resposta = await fetch(AppState.apiUrl, {
+            method: "POST",
+            mode: "cors",
+            redirect: "follow",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify({
+              acao: "CRIAR_PEDIDO",
+              idPedidoManual: pedidoPayload.id_pedido, 
+              usuario: pedidoPayload.usuario,
+              itens: pedidoPayload.itens
+            })
+          });
+          
+          if (resposta.ok) {
+            const resJson = await resposta.json();
+            if (resJson.sucesso) {
+              consoleOut.innerHTML += `<span style="color: var(--accent); font-weight: bold;">[CONCLUÍDO]</span>\n`;
+              sucessoTransacao = true;
+            } else {
+              consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[REJEITADO]</span> -> ${resJson.mensagem}\n`;
+              sucessoTransacao = true; // Rejeitado por regra de negócio (ex: duplicado), não faz retry
+            }
+          } else {
+            console.warn(`[API] Erro HTTP ${resposta.status} no Pedido ${pedidoPayload.id_pedido}`);
+          }
+
+        } catch (err) {
+          console.warn(`[CORS/Rede] Oscilação capturada na tentativa ${tentativaAtual} do pedido ${pedidoPayload.id_pedido}:`, err.message);
+          // Se cair no catch (TypeError / Failed to fetch), o laço 'while' roda a próxima tentativa
+          if (tentativaAtual === maxTentativas) {
+            consoleOut.innerHTML += `<span style="color: var(--error); font-weight: bold;">[FALHA DE CONEXÃO HTTP]</span>\n`;
+          }
+        }
       }
     }
 
