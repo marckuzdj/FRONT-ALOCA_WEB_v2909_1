@@ -367,8 +367,8 @@
   <header>
     <div class="logo">ALOCA<span>.WEB</span> <small style="font-size:0.8rem; color:var(--text-muted)">// EXT-SPA</small></div>
     <div>
-      <select id="ufSelector" onchange="conectarNodoRegional()">
-        <option value="">Selecione a UF...</option>
+      <select id="ufSelector" onchange="rastrearApiRegionalCabeçalho(); conectarNodoRegional();">
+        <option value="">Selecione o Estoque Autorizado...</option>
         <option value="SP">São Paulo (SP)</option>
         <option value="RJ">Rio de Janeiro (RJ)</option>
       </select>
@@ -888,21 +888,37 @@ async function executarLoginIAM(btn, otpForçado = "") {
       AppState.uf = ufTrabalho;
       AppState.apiUrl = urlDestino;
       AppState.usuario = resJson.usuario.email;
-      // Chaveia dinamicamente o segmento com base no vínculo de acesso real da planilha
       AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; 
 
-      // Sincroniza o seletor visual de UFs do cabeçalho
+      // ==========================================================================
+      // ENGINE DE SEGURANÇA: ALIMENTAÇÃO DINÂMICA DO SELECTOR POR REGIONAIS AUTORIZADAS
+      // ==========================================================================
       const headSelector = document.getElementById("ufSelector");
-      if (headSelector) headSelector.value = ufTrabalho;
+      if (headSelector) {
+        // Captura a string de regionais gravadas no Sheets (Ex: "CD PRSC, CD SP, CD RJ")
+        const stringRegionaisRaw = resJson.usuario.regionais || "";
+        
+        // Quebra pelas vírgulas e limpa espaços invisíveis
+        const listaRegionaisAutorizadas = stringRegionaisRaw.split(",")
+          .map(r => r.trim())
+          .filter(r => r !== "");
 
-      // Libera o acesso ocultando a cortina preta de segurança
+        if (listaRegionaisAutorizadas.length > 0) {
+          // Injeta dinamicamente apenas as regionais às quais o funcionário possui credencial
+          headSelector.innerHTML = '<option value="" disabled selected>Selecione o Estoque...</option>' +
+            listaRegionaisAutorizadas.map(reg => `<option value="${reg}">${reg}</option>`).join('');
+        } else {
+          // Fallback de segurança se o cadastro estiver com o campo vazio
+          headSelector.innerHTML = `<option value="${ufTrabalho}" selected>${ufTrabalho} (Padrão)</option>`;
+        }
+      }
+
+      // Libera o acesso ocultando a cortina preta de segurança do IAM
       const telaSeguranca = document.getElementById("iam-tela-seguranca");
       if (telaSeguranca) telaSeguranca.style.display = "none";
       
-      // Dispara a carga veloz de 110 itens do catálogo regional homologado
-      conectarNodoRegional();
-      
-      alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\nPerfil: ${resJson.usuario.vinculo} | Nível: ${resJson.usuario.acesso}`);
+      // EXCELENTE UX: O catálogo inicia aguardando o operador escolher qual das regionais dele ele quer auditar
+      alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\n\nSelecione uma das suas regionais autorizadas no topo para carregar o estoque.`);
     } else {
       alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
     }
@@ -949,16 +965,23 @@ async function executarLoginIAM(btn, otpForçado = "") {
   /**
    * 2. Conector de Rede HTTP Gateway (Com Motor de 3 Tentativas)
    */
+  /**
+   * 2. Conector de Rede HTTP Gateway (Ajustado para ler a Regional/Stock Selecionada)
+   */
   async function conectarNodoRegional() {
-    AppState.uf = document.getElementById("ufSelector").value;
-    AppState.apiUrl = EndpointsUFs[AppState.uf] || "";
     const tabela = document.getElementById("lista-produtos");
+    // Captura a regional/stock ativa escolhida pelo operador no cabeçalho
+    const regionalSelecionada = document.getElementById("ufSelector").value;
     
+    if (!regionalSelecionada) return;
+    
+    // Garante consistência usando o endpoint seguro que passou pela portaria do login
     if (!AppState.apiUrl) {
-      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center; padding:2rem;">Nenhuma UF selecionada.</td></tr>`;
+      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--text-muted); text-align:center; padding:2rem;">Nenhuma sessão ativa com o banco distribuído. Realize o login novamente.</td></tr>`;
       return;
     }
-    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--accent); text-align:center; padding:2rem;">Buscando dados via API Gateway do Google...</td></tr>`;
+    
+    tabela.innerHTML = `<tr><td colspan="5" style="color:var(--accent); text-align:center; padding:2rem;">Buscando dados de estoque para [ ${regionalSelecionada} ] via API Gateway...</td></tr>`;
     
     const maxTentativas = 3;
     let tentativaAtual = 0;
@@ -973,24 +996,29 @@ async function executarLoginIAM(btn, otpForçado = "") {
           mode: "cors",
           redirect: "follow",
           headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ acao: "BUSCAR_CATALOGO", segmento: AppState.segmento })
+          // Envia a chave da regional/stock selecionada junto com a ação padrão
+          body: JSON.stringify({ 
+            acao: "BUSCAR_CATALOGO", 
+            segmento: AppState.segmento,
+            regionalEstoque: regionalSelecionada 
+          })
         });
         if (resposta.ok) {
           dadosHttp = await resposta.json();
           sucesso = true;
         }
       } catch (err) {
-        console.warn(`[Rede] Falha na tentativa ${tentativaAtual}:`, err.message);
+        console.warn(`[Rede Catálogo] Falha na tentativa ${tentativaAtual}:`, err.message);
       }
     }
 
     if (sucesso && dadosHttp && dadosHttp.sucesso) {
-      // Chama o renderizador híbrido que vamos colocar no próximo chat
       renderizarCatalogoHibrido(dadosHttp.dados);
     } else {
-      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente re-selecionar a UF.</td></tr>`;
+      tabela.innerHTML = `<tr><td colspan="5" style="color:var(--error); font-weight: bold; text-align:center; padding:2rem;">❌ Nó Regional Indisponível. Tente re-selecionar o estoque.</td></tr>`;
     }
   }
+
 
     /**
    * 3. Renderização Dinâmica do Catálogo com Atributos de Busca
@@ -1611,6 +1639,35 @@ function lerArquivoCSV(input) {
       );
     } else {
       console.error(`[Aloca WEB IAM] Alerta de Compliance: Nenhuma URL de Web App localizada para a UF: ${ufTrabalho}`);
+    }
+  }
+
+    /**
+   * Monitor de Cabeçalho: Cospe no console a URL da API acionada pela troca de estoque/regional
+   */
+  function rastrearApiRegionalCabeçalho() {
+    const regionalAtiva = document.getElementById("ufSelector").value;
+    
+    if (!regionalAtiva) {
+      console.log("[Aloca WEB Mestre] Seletor de estoque limpo.");
+      return;
+    }
+
+    // Resgata a URL estável gravada na sessão autenticada pelo AppState
+    const urlAtiva = AppState.apiUrl;
+
+    if (urlAtiva) {
+      // Exibe o log estilizado em Roxo Nu-Style indicando a transação de estoque
+      console.log(
+        `%c[ESTOQUE ALTERADO] %cRegional/Stock: %c${regionalAtiva} %c| Endereço do Gateway: %c${urlAtiva}`,
+        "color: #820ad1; font-weight: bold;",
+        "color: #111111; font-weight: bold;",
+        "color: #ffffff; font-weight: bold; background: #820ad1; padding: 2px 6px; border-radius: 3px;",
+        "color: #6b7280;",
+        "color: #581c87; font-family: monospace; font-size: 0.8rem;"
+      );
+    } else {
+      console.warn(`[Aloca WEB Mestre] Sessão sem API url associada para carregar a regional: ${regionalAtiva}`);
     }
   }
 
