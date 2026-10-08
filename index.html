@@ -1652,7 +1652,8 @@ function lerArquivoCSV(input) {
 
 
   /**
-   * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor
+   * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor de login
+   * Calibrado estritamente para cruzar a UF selecionada com o banco de dados dinâmico da AlocaWEB_Config
    */
   function rastrearApiUfSelecionada() {
     const ufTrabalho = document.getElementById("loginUfSelector").value;
@@ -1662,10 +1663,31 @@ function lerArquivoCSV(input) {
       return;
     }
 
-    const urlFaturamentoAlvo = EndpointsUFs[ufTrabalho];
+    let urlFaturamentoAlvo = "";
+
+    // RESOLUÇÃO RELACIONAL: Consulta o dicionário dinâmico baixado no ciclo de inicialização
+    if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
+      // Como o cache do lote mestre indexa por Regional (ex: DFW1), varremos o mapa procurando
+      // a rota cujo identificador de estoque pertença à UF selecionada (ex: DF)
+      const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
+      
+      for (let i = 0; i < chavesRegionais.length; i++) {
+        const regionalKey = chavesRegionais[i];
+        // Verifica se a regional começa com a sigla exata da UF (ex: "DFW1" começa com "DF")
+        if (regionalKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
+          urlFaturamentoAlvo = AppState.iamConfigCache.rotasRegionais[regionalKey];
+          break; // Link localizado na matriz! Interrompe a varredura.
+        }
+      }
+    }
+
+    // Fallback de contingência: Caso o cache central falte, tenta ler o array fixo do topo do script
+    if (!urlFaturamentoAlvo) {
+      urlFaturamentoAlvo = EndpointsUFs[ufTrabalho] || "";
+    }
 
     if (urlFaturamentoAlvo) {
-      // Exibe o log industrial estilizado com a cor roxa Nu-Style
+      // Exibe o log industrial estruturado com a identidade visual roxa Nu-Style
       console.log(
         `%c[API GATEWAY CHAVEADO] %cFilial: %c${ufTrabalho} %c| Endpoint Acionado: %c${urlFaturamentoAlvo}`,
         "color: #820ad1; font-weight: bold;",
@@ -1678,6 +1700,7 @@ function lerArquivoCSV(input) {
       console.error(`[Aloca WEB IAM] Alerta de Compliance: Nenhuma URL de Web App localizada para a UF: ${ufTrabalho}`);
     }
   }
+
 
     /**
    * Monitor de Cabeçalho: Cospe no console a URL da API acionada pela troca de estoque/regional
