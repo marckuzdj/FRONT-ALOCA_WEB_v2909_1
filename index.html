@@ -707,6 +707,25 @@
       return;
     }
 
+    // ==========================================================================
+    // 🔐 POLÍTICA DE SENHAS CORPORATIVAS (COMPLEXIDADE EXIGIDA)
+    // ==========================================================================
+    // RegEx explicada: (?=.*[A-Za-z]) tem letra, (?=.*\d) tem número, (?=.*[@$!%*#?&]) tem especial, {6,} mínimo 6 digitos
+    const regexComplexidadeSenha = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&.])[A-Za-z\d@$!%*#?&.]{6,}$/;
+
+    if (!regexComplexidadeSenha.test(senha)) {
+      alert(
+        "🚨 SENHA FORA DOS PADRÕES DE SEGURANÇA VIVO\n\n" +
+        "A sua senha não atende aos requisitos mínimos de compliance.\n\n" +
+        "Sua nova senha deve conter obrigatoriamente:\n" +
+        "• No mínimo 6 caracteres de comprimento\n" +
+        "• Pelo menos uma letra\n" +
+        "• Pelo menos um número\n" +
+        "• Pelo menos um caractere especial (Ex: @, #, $, %, &, *, !, .)"
+      );
+      return; // Trava o envio e aborta a execução do cadastro
+    }
+
     // Define o nível de privilégio inicial com base no preenchimento
     let acessoNivel = "RESTRITO";
 
