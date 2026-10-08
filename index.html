@@ -1653,7 +1653,7 @@ function lerArquivoCSV(input) {
 
   /**
    * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor de login
-   * Calibrado estritamente para cruzar a UF selecionada com o banco de dados dinâmico da AlocaWEB_Config
+   * Calibrado com Inteligência Reativa contra atrasos de carregamento assíncrono (Timeout Protection)
    */
   function rastrearApiUfSelecionada() {
     const ufTrabalho = document.getElementById("loginUfSelector").value;
@@ -1663,25 +1663,29 @@ function lerArquivoCSV(input) {
       return;
     }
 
+    // ==========================================================================
+    // 🛡️ REATIVIDADE ASSÍNCRONA: SE O CACHE AINDA NÃO CHEGOU DO GOOGLE, AGUARDA
+    // ==========================================================================
+    if (!AppState.iamConfigCache || !AppState.iamConfigCache.rotasRegionais) {
+      console.warn(`[Aloca WEB IAM] Aguardando sincronismo de tabelas mestre para a UF: ${ufTrabalho}...`);
+      // Faz um agendamento rápido de 350ms para tentar ler novamente quando o cache estiver pronto
+      setTimeout(rastrearApiUfSelecionada, 350);
+      return;
+    }
+
     let urlFaturamentoAlvo = "";
 
-    // RESOLUÇÃO RELACIONAL: Consulta o dicionário dinâmico baixado no ciclo de inicialização
-    if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
-      // Como o cache do lote mestre indexa por Regional (ex: DFW1), varremos o mapa procurando
-      // a rota cujo identificador de estoque pertença à UF selecionada (ex: DF)
-      const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
-      
-      for (let i = 0; i < chavesRegionais.length; i++) {
-        const regionalKey = chavesRegionais[i];
-        // Verifica se a regional começa com a sigla exata da UF (ex: "DFW1" começa com "DF")
-        if (regionalKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
-          urlFaturamentoAlvo = AppState.iamConfigCache.rotasRegionais[regionalKey];
-          break; // Link localizado na matriz! Interrompe a varredura.
-        }
+    // RESOLUÇÃO RELACIONAL: Varre o dicionário de chaves dinâmicas
+    const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
+    for (let i = 0; i < chavesRegionais.length; i++) {
+      const regionalKey = chavesRegionais[i];
+      if (regionalKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
+        urlFaturamentoAlvo = AppState.iamConfigCache.rotasRegionais[regionalKey];
+        break; // Link localizado! Interrompe a varredura.
       }
     }
 
-    // Fallback de contingência: Caso o cache central falte, tenta ler o array fixo do topo do script
+    // Fallback de contingência: Caso falte na planilha mestre, usa o array fixo do topo
     if (!urlFaturamentoAlvo) {
       urlFaturamentoAlvo = EndpointsUFs[ufTrabalho] || "";
     }
@@ -1700,6 +1704,7 @@ function lerArquivoCSV(input) {
       console.error(`[Aloca WEB IAM] Alerta de Compliance: Nenhuma URL de Web App localizada para a UF: ${ufTrabalho}`);
     }
   }
+
 
 
     /**
