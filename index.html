@@ -784,37 +784,51 @@
     }
   }
 
-  /**
-   * 5. Motor de Validação de Login com Autenticação Reativa de 2 Fatores (OTP via E-mail)
-   */
-  async function executarLoginIAM(btn, otpForçado = "") {
-    const ufTrabalho = document.getElementById("loginUfSelector").value;
-    const email = document.getElementById("loginEmail").value.trim();
-    const senha = document.getElementById("loginSenha").value;
+async function executarLoginIAM(btn, otpForçado = "") {
+  const ufTrabalho = document.getElementById("loginUfSelector").value;
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value;
 
-    if (!ufTrabalho || !email || !senha) {
-      alert("Preencha a UF, e-mail e senha para realizar o login.");
-      return;
-    }
+  if (!ufTrabalho || !email || !senha) {
+    alert("Preencha a UF, e-mail e senha para realizar o login.");
+    return;
+  }
 
-    btn.disabled = true;
-    btn.innerHTML = otpForçado ? "⏳ Validando Código 2FA..." : "⏳ Autenticando Credenciais...";
+  // Configuração nativa da esteira de resiliência
+  const maxTentativas = 3;
+  let tentativaAtual = 0;
+  let sucessoConexao = false;
+  let resposta = null;
+  let resJson = null;
 
-    // Prepara o objeto básico de transmissão
-    const payloadLogin = { 
-      acao: "EFETUAR_LOGIN_USUARIO", 
-      email: email, 
-      senha: senha 
-    };
+  // Prepara o objeto básico de transmissão
+  const payloadLogin = { 
+    acao: "EFETUAR_LOGIN_USUARIO", 
+    email: email, 
+    senha: senha 
+  };
 
-    // Se a função foi invocada na segunda perna do fluxo, anexa o código digitado
-    if (otpForçado) {
-      payloadLogin.otpDigitado = otpForçado;
-    }
+  // Se a função foi invocada na segunda perna do fluxo, anexa o código digitado
+  if (otpForçado) {
+    payloadLogin.otpDigitado = otpForçado;
+  }
 
+  // ESTEIRA DE CONEXÃO CONTRA INSTABILIDADES (ANTI-FAILED TO FETCH)
+  while (tentativaAtual < maxTentativas && !sucessoConexao) {
     try {
+      tentativaAtual++;
+      
+      if (tentativaAtual === 1) {
+        btn.disabled = true;
+        btn.innerHTML = otpForçado ? "⏳ Validando Código 2FA..." : "⏳ Autenticando Credenciais...";
+      } else {
+        btn.innerHTML = `⚠️ Instabilidade na rede. Re-tentando conexão (${tentativaAtual}/${maxTentativas})...`;
+        // Delay de Alívio: Libera a fila e limpa os gargalos concorrentes do LockService
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+
       const urlDestino = EndpointsUFs[ufTrabalho];
-      const resposta = await fetch(urlDestino, {
+      resposta = await fetch(urlDestino, {
         method: "POST",
         mode: "cors",
         redirect: "follow",
@@ -822,68 +836,88 @@
         body: JSON.stringify(payloadLogin)
       });
 
-      const resJson = await resposta.json();
+      if (resposta.ok) {
+        resJson = await resposta.json();
+        sucessoConexao = true; // Comunicação homologada com o servidor! Desativa o loop.
+      }
+    } catch (err) {
+      console.warn(`[Login] Falha na tentativa ${tentativaAtual}:`, err.message);
+      // O catch intercepta o "Failed to fetch" e joga de volta para o loop 'while' até estourar o limite
+    }
+  }
 
-      // ==========================================================================
-      // 🔒 INTERCEPTADOR 2FA: SEGUNDO FATOR DE AUTENTICAÇÃO ATIVADO
-      // ==========================================================================
-      if (!resJson.sucesso && resJson.primeiroAcesso) {
-        
-        // Abre a portaria eletrônica solicitando o token recebido em segundo plano
-        const otpDigitado = prompt(
-          "🔒 PRIMEIRO ACESSO DETECTADO\n\n" +
-          "Favor inserir o código OTP enviado ao e-mail cadastrado.\n\n" +
-          "⚠️ Verifique as Caixas de Entrada / SPAM / Lixo Eletrônico no seu gerenciador corporativo."
-        );
+  // Retorno de segurança operacional caso o Google fique fora do ar nas 3 tentativas
+  if (!sucessoConexao) {
+    alert("❌ Falha crítica de rede com o nó regional.\n\nO servidor do Google demorou muito para responder e esgotou as re-tentativas automáticas.\n\nPor favor, aguarde alguns segundos e clique em entrar novamente.");
+    btn.disabled = false;
+    btn.innerHTML = otpForçado ? "🔒 Validar Código 2FA" : "🔓 Autenticar e Entrar";
+    return;
+  }
 
-        if (!otpDigitado) {
-          alert("Autenticação cancelada. O acesso seguro ao nó regional foi abortado.");
-          btn.disabled = false;
-          btn.innerHTML = "🔓 Autenticar e Entrar";
-          return;
-        }
+  try {
+    const urlDestino = EndpointsUFs[ufTrabalho];
 
-        // RECURSIVIDADE SEGURA: Invoca a si mesma injetando o OTP coletado na tela
-        executarLoginIAM(btn, otpDigitado);
+    // ==========================================================================
+    // 🔒 INTERCEPTADOR 2FA: SEGUNDO FATOR DE AUTENTICAÇÃO ATIVADO
+    // ==========================================================================
+    if (!resJson.sucesso && resJson.primeiroAcesso) {
+      
+      // Abre a portaria eletrônica solicitando o token recebido em segundo plano
+      const otpDigitado = prompt(
+        "🔒 PRIMEIRO ACESSO DETECTADO\n\n" +
+        "Favor inserir o código OTP enviado ao e-mail cadastrado.\n\n" +
+        "⚠️ Verifique as Caixas de Entrada / SPAM / Lixo Eletrônico no seu gerenciador corporativo."
+      );
+
+      if (!otpDigitado) {
+        alert("Autenticação cancelada. O acesso seguro ao nó regional foi abortado.");
+        btn.disabled = false;
+        btn.innerHTML = "🔓 Autenticar e Entrar";
         return;
       }
 
-      // ==========================================================================
-      // FLUXO DE ACESSO CONCLUÍDO E HOMOLOGADO (LOGIN COM SUCESSO)
-      // ==========================================================================
-      if (resJson.sucesso) {
-        AppState.uf = ufTrabalho;
-        AppState.apiUrl = urlDestino;
-        AppState.usuario = resJson.usuario.email;
-        // Chaveia dinamicamente o segmento com base no vínculo de acesso real da planilha
-        AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; 
+      // RECURSIVIDADE SEGURA: Invoca a si mesma injetando o OTP coletado na tela
+      executarLoginIAM(btn, otpDigitado);
+      return;
+    }
 
-        // Sincroniza o seletor visual de UFs do cabeçalho
-        const headSelector = document.getElementById("ufSelector");
-        if (headSelector) headSelector.value = ufTrabalho;
+    // ==========================================================================
+    // FLUXO DE ACESSO CONCLUÍDO E HOMOLOGADO (LOGIN COM SUCESSO)
+    // ==========================================================================
+    if (resJson.sucesso) {
+      AppState.uf = ufTrabalho;
+      AppState.apiUrl = urlDestino;
+      AppState.usuario = resJson.usuario.email;
+      // Chaveia dinamicamente o segmento com base no vínculo de acesso real da planilha
+      AppState.segmento = resJson.usuario.vinculo === "Operador" ? "LAR" : "uniforme"; 
 
-        // Libera o acesso ocultando a cortina preta de segurança
-        const telaSeguranca = document.getElementById("iam-tela-seguranca");
-        if (telaSeguranca) telaSeguranca.style.display = "none";
-        
-        // Dispara a carga veloz de 110 itens do catálogo regional homologado
-        conectarNodoRegional();
-        
-        alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\nPerfil: ${resJson.usuario.vinculo} | Nível: ${resJson.usuario.acesso}`);
-      } else {
-        alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
-      }
+      // Sincroniza o seletor visual de UFs do cabeçalho
+      const headSelector = document.getElementById("ufSelector");
+      if (headSelector) headSelector.value = ufTrabalho;
 
-    } catch (err) {
-      alert("Erro ao efetuar login na rede da UF: " + err.message);
-    } finally {
-      // Só destrava o botão se o fluxo não estiver aguardando recursividade
-      if (!otpForçado) {
-        btn.disabled = false;
-        btn.innerHTML = "🔓 Autenticar e Entrar";
-      }
+      // Libera o acesso ocultando a cortina preta de segurança
+      const telaSeguranca = document.getElementById("iam-tela-seguranca");
+      if (telaSeguranca) telaSeguranca.style.display = "none";
+      
+      // Dispara a carga veloz de 110 itens do catálogo regional homologado
+      conectarNodoRegional();
+      
+      alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\nPerfil: ${resJson.usuario.vinculo} | Nível: ${resJson.usuario.acesso}`);
+    } else {
+      alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
+    }
+
+  } catch (err) {
+    alert("Erro ao processar resposta de login: " + err.message);
+  } finally {
+    // Só destrava o botão se o fluxo não estiver aguardando recursividade
+    if (!otpForçado) {
+      btn.disabled = false;
+      btn.innerHTML = "🔓 Autenticar e Entrar";
     }
   }
+}
+
 
   
   /**
