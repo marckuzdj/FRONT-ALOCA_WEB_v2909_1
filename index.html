@@ -525,12 +525,14 @@
 
   
 <script>
-  // Centralização de Endpoints das suas macros do Apps Script por UF
-  const EndpointsUFs = {
-    SP: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec"
- //   RJ: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec"
-  };
 
+  
+  // ✅ ARQUITETURA INDEPENDENTE: Mapeamento estrito de produção para o Portão de Login
+  const EndpointsUFs = {
+    RS: "https://script.google.com/macros/s/AKfycbwpZebTZ-CxOApm0N6HDJOyf2uSUAqE--fMDv7-YjpzkE7qN0K8j71OT97do3pk-FZtyw/exec",
+    DF: "https://script.google.com/macros/s/AKfycbxN0aPSORDSc6IglzeHZnqDUymyLh7jDwrWtxcCA2cRgdiC2Jm39xzXGa7OLgAg7tL79w/exec",
+    SP: "https://script.google.com/macros/s/AKfycby60Cv7cgQSralRShOuFwTe5RF1W2qqr9eiHcOg3X8yp-wYETASVFfe06UKQVPgAhSVeA/exec"
+  };
 
   const AppState = {
     uf: "",
@@ -838,11 +840,12 @@ async function executarLoginIAM(btn, otpForçado = "") {
   let resposta = null;
   let resJson = null;
 
-  // Prepara o objeto básico de transmissão
+  // Prepara o objeto básico de transmissão com a UF de compliance injetada
   const payloadLogin = { 
     acao: "EFETUAR_LOGIN_USUARIO", 
     email: email, 
-    senha: senha 
+    senha: senha,
+    ufTrabalho: ufTrabalho
   };
 
   // Se a função foi invocada na segunda perna do fluxo, anexa o código digitado
@@ -865,29 +868,19 @@ async function executarLoginIAM(btn, otpForçado = "") {
       }
 
       // ==========================================================================
-      // 🔒 RESOLUÇÃO DINÂMICA DE ENDPOINT ANTI-UNDEFINED
+      // 🔒 RESOLUÇÃO ESTÁTICA E RIGIDA DE ENDPOINT ANTI-LOGIN CRUZADO
       // ==========================================================================
-      let urlDestino = "";
+      const urlEnvio = EndpointsUFs[ufTrabalho];
 
-      // 1. Tenta extrair a rota específica da planilha mestre em cache
-      if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
-        const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
-        for (let i = 0; i < chavesRegionais.length; i++) {
-          const regKey = chavesRegionais[i];
-          if (regKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
-            urlDestino = AppState.iamConfigCache.rotasRegionais[regKey];
-            break;
-          }
-        }
+      if (!urlEnvio) {
+        alert(`[ERRO OPERACIONAL] O endpoint de rede para a UF [${ufTrabalho}] não foi configurado no topo do script.`);
+        btn.disabled = false;
+        btn.innerHTML = "🔓 Autenticar e Entrar";
+        return;
       }
 
-      // 2. FALLBACK SEGURO: Se o cache mestre atrasou, usa o portão único de SP como roteador central
-      if (!urlDestino || urlDestino === "undefined") {
-        urlDestino = EndpointsUFs[ufTrabalho] || EndpointsUFs.SP;
-      }
-
-      // Executa o disparo HTTPS com a URL 100% higienizada e garantida
-      resposta = await fetch(urlDestino, {
+      // Executa o disparo HTTPS direto para o servidor da jurisdição correta
+      resposta = await fetch(urlEnvio, {
         method: "POST",
         mode: "cors",
         redirect: "follow",
@@ -895,14 +888,12 @@ async function executarLoginIAM(btn, otpForçado = "") {
         body: JSON.stringify(payloadLogin)
       });
 
-
       if (resposta.ok) {
         resJson = await resposta.json();
         sucessoConexao = true; // Comunicação homologada com o servidor! Desativa o loop.
       }
     } catch (err) {
       console.warn(`[Login] Falha na tentativa ${tentativaAtual}:`, err.message);
-      // O catch intercepta o "Failed to fetch" e joga de volta para o loop 'while' até estourar o limite
     }
   }
 
@@ -915,6 +906,7 @@ async function executarLoginIAM(btn, otpForçado = "") {
   }
 
   try {
+    // Vincula estritamente a URL usada ao token ativo do AppState para a sessão
     const urlDestino = EndpointsUFs[ufTrabalho];
 
     // ==========================================================================
@@ -993,6 +985,7 @@ async function executarLoginIAM(btn, otpForçado = "") {
     }
   }
 }
+
 
 
   
