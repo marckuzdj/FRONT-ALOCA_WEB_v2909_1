@@ -864,7 +864,29 @@ async function executarLoginIAM(btn, otpForçado = "") {
         await new Promise(resolve => setTimeout(resolve, 1200));
       }
 
-      const urlDestino = EndpointsUFs[ufTrabalho];
+      // ==========================================================================
+      // 🔒 RESOLUÇÃO DINÂMICA DE ENDPOINT ANTI-UNDEFINED
+      // ==========================================================================
+      let urlDestino = "";
+
+      // 1. Tenta extrair a rota específica da planilha mestre em cache
+      if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
+        const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
+        for (let i = 0; i < chavesRegionais.length; i++) {
+          const regKey = chavesRegionais[i];
+          if (regKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
+            urlDestino = AppState.iamConfigCache.rotasRegionais[regKey];
+            break;
+          }
+        }
+      }
+
+      // 2. FALLBACK SEGURO: Se o cache mestre atrasou, usa o portão único de SP como roteador central
+      if (!urlDestino || urlDestino === "undefined") {
+        urlDestino = EndpointsUFs[ufTrabalho] || EndpointsUFs.SP;
+      }
+
+      // Executa o disparo HTTPS com a URL 100% higienizada e garantida
       resposta = await fetch(urlDestino, {
         method: "POST",
         mode: "cors",
@@ -872,6 +894,7 @@ async function executarLoginIAM(btn, otpForçado = "") {
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payloadLogin)
       });
+
 
       if (resposta.ok) {
         resJson = await resposta.json();
