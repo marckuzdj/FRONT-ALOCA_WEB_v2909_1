@@ -1669,7 +1669,7 @@ function lerArquivoCSV(input) {
 
   /**
    * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor de login
-   * Versão Linear Anti-Loop (Proteção total do motor JavaScript)
+   * Versão Simplificada com Alerta de Endpoint não Configurado
    */
   function rastrearApiUfSelecionada() {
     const ufTrabalho = document.getElementById("loginUfSelector").value;
@@ -1681,7 +1681,7 @@ function lerArquivoCSV(input) {
 
     let urlFaturamentoAlvo = "";
 
-    // 1. TENTA RESOLVER PELO CACHE DINÂMICO SE ELE JÁ EXISTIR
+    // 1. Tenta resolver pelo cache dinâmico da planilha mestre
     if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
       const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
       for (let i = 0; i < chavesRegionais.length; i++) {
@@ -1693,12 +1693,14 @@ function lerArquivoCSV(input) {
       }
     }
 
-    // 2. FALLBACK SEGURO IMEDIATO: Se o cache falhou ou não chegou, usa a constante estática ou deduz
+    // 2. Fallback: Se não achou no cache, pega do mapeamento fixo do topo
     if (!urlFaturamentoAlvo) {
       urlFaturamentoAlvo = EndpointsUFs[ufTrabalho] || "";
     }
 
-    // 3. EXECUÇÃO DO LOG OU AVISO SEM RECURSIVIDADE FANTASMA
+    // ==========================================================================
+    // 🔍 LOG DE AUDITORIA SIMPLIFICADO E DIRETO (MATEI O TEXTO LONGO RESIDUAL)
+    // ==========================================================================
     if (urlFaturamentoAlvo) {
       console.log(
         `%c[API GATEWAY CHAVEADO] %cFilial: %c${ufTrabalho} %c| Endpoint Acionado: %c${urlFaturamentoAlvo}`,
@@ -1709,9 +1711,11 @@ function lerArquivoCSV(input) {
         "color: #581c87; font-family: monospace; font-size: 0.8rem;"
       );
     } else {
-      console.warn(`[Aloca WEB IAM] Tabelas mestre assíncronas ainda não indexadas para a UF: ${ufTrabalho}. O Gateway tentará a conexão direta no clique do Login.`);
+      // Alerta curto e cirúrgico como você sugeriu
+      console.warn(`%c[IAM] Alerta: UF [${ufTrabalho}] não tem endpoint configurado.`, "color: #b45309; font-weight: bold;");
     }
   }
+
 
 
 
