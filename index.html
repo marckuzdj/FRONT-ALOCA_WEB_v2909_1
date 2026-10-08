@@ -543,7 +543,7 @@
 
   // Extensão de Cache Local para as configurações do IAM
   AppState.iamConfigCache = null;
-
+  let iamCarregandoAtivo = false; // Trava de concorrência local
   /**
    * 1. Controle de Alternância de Cards (Login / Registro)
    */
@@ -564,15 +564,13 @@
 
   /**
    * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
-   */
-  /**
-   * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
-   * Alimenta dinamicamente tanto a tela de Login quanto a de Registro
+   * Unificada e protegida contra disparos duplos concorrentes
    */
   async function carregarConfiguracoesIniciaisIAM() {
-    if (AppState.iamConfigCache) return; // Evita requisições duplicadas se já estiver em cache
-
-    // Usa o endpoint estável de SP como Gateway para acessar a planilha mestre AlocaWEB_Config
+    // Se já estiver carregado ou com uma requisição em andamento, aborta imediatamente
+    if (AppState.iamConfigCache || iamCarregandoAtivo) return; 
+    
+    iamCarregandoAtivo = true;
     const urlGateway = EndpointsUFs.SP; 
     
     try {
@@ -584,12 +582,13 @@
         body: JSON.stringify({ acao: "OBTER_CONFIGURACOES_CADASTRO" })
       });
       
+      if (!resposta.ok) throw new Error(`HTTP Erro: ${resposta.status}`);
       const resJson = await resposta.json();
       
       if (resJson.sucesso) {
-        AppState.iamConfigCache = resJson; // Guarda no estado global do AppState
+        AppState.iamConfigCache = resJson; // Salva no cache do AppState
 
-        // Alimenta o Combobox de UFs da tela de Login
+        // Alimenta o Combobox da tela de Login
         const loginSelectUf = document.getElementById("loginUfSelector");
         if (loginSelectUf) {
           loginSelectUf.innerHTML = '<option value="">Escolha a UF da Operação...</option>' + 
@@ -613,15 +612,27 @@
           `).join('');
         }
 
-        // CORREÇÃO CRUCIAL: Força a atualização do Combobox de empresas passando o valor padrão inicial
-        atualizarComboboxEmpresasMestre();
+        // Atualiza as empresas com base no estado inicial neutro
+        if (typeof atualizarComboboxEmpresasMestre === "function") {
+          atualizarComboboxEmpresasMestre();
+        }
       } else {
-        console.error("Erro de Governança: " + resJson.mensagem);
+        console.error("[Aloca WEB IAM] Erro devolvido pelo servidor:", resJson.mensagem);
       }
     } catch (err) {
-      console.error("[IAM Config Error]", err);
+      console.error("[Aloca WEB IAM] Erro de rede interceptado e tratado:", err.message);
+    } finally {
+      iamCarregandoAtivo = false;
     }
   }
+
+  // ✅ GATILHO UNIFICADO E SEGURO: Roda apenas uma vez quando o DOM estiver pronto
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", carregarConfiguracoesIniciaisIAM);
+  } else {
+    carregarConfiguracoesIniciaisIAM();
+  }
+
 
   // GATILHO COMPLIANCE: Dispara a carga de UFs mestre automaticamente na abertura da SPA
   window.onload = function() {
