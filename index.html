@@ -716,15 +716,15 @@
     if (vinculo === "Geral") {
       // Validação 1: O e-mail precisa conter obrigatoriamente o domínio institucional da Telefônica
       if (!email.toLowerCase().includes("@telefonica")) {
-        alert("🚨 REQUISITO DE SEGURANÇA NEGADO\n\nO perfil 'Geral' é de uso exclusivo da Governança Telefônica.\n\nPor favor, insira um e-mail corporativo válido contendo o domínio @telefonica para prosseguir.");
+        alert("🚨 REQUISITO DE SEGURANÇA NEGADO\n\nO perfil 'Geral' é de uso exclusivo da Governança Telefônica.\n\nPor favor, insira um e-mail corporativo válido para este acesso.");
         return;
       }
 
       // Validação 2: Se o domínio estiver correto, desafia o usuário com o prompt do Token ADM
-      const codigoDigitado = prompt("🔒 PERFIL ADMINISTRADOR DETECTADO\n\nPor razões de segurança, insira o 'Código Registro ADM' para liberar o acesso total ao sistema:");
+      const codigoDigitado = prompt("🔒 PERFIL ADMINISTRADOR DETECTADO\n\nPara continuar, insira o 'Código Registro ADM' para liberar este acesso:");
       
       if (!codigoDigitado) {
-        alert("Operação cancelada. O cadastro como Administrador Geral foi abortado.");
+        alert("Operação cancelada. O cadastro tipo GERAL foi abortado.");
         return;
       }
 
@@ -867,7 +867,7 @@ async function executarLoginIAM(btn, otpForçado = "") {
 
   // Retorno de segurança operacional caso o Google fique fora do ar nas 3 tentativas
   if (!sucessoConexao) {
-    alert("❌ Falha crítica de rede com o nó regional.\n\nO servidor do Google demorou muito para responder e esgotou as re-tentativas automáticas.\n\nPor favor, aguarde alguns segundos e clique em entrar novamente.");
+    alert("❌ Falha crítica de rede com o nó regional.\n\nO servidor não respondeu e as tentativas automáticas foram esgotadas.\n\nPor favor, aguarde alguns segundos e tente entrar novamente.");
     btn.disabled = false;
     btn.innerHTML = otpForçado ? "🔒 Validar Código 2FA" : "🔓 Autenticar e Entrar";
     return;
@@ -885,11 +885,11 @@ async function executarLoginIAM(btn, otpForçado = "") {
       const otpDigitado = prompt(
         "🔒 PRIMEIRO ACESSO DETECTADO\n\n" +
         "Favor inserir o código OTP enviado ao e-mail cadastrado.\n\n" +
-        "⚠️ Verifique as Caixas de Entrada / SPAM / Lixo Eletrônico no seu gerenciador corporativo."
+        "⚠️ Verifique as Caixas de Entrada / SPAM / Lixo Eletrônico no seu gerenciador de emails."
       );
 
       if (!otpDigitado) {
-        alert("Autenticação cancelada. O acesso seguro ao nó regional foi abortado.");
+        alert("Autenticação cancelada. O acesso seguro à regional foi abortado.");
         btn.disabled = false;
         btn.innerHTML = "🔓 Autenticar e Entrar";
         return;
@@ -937,7 +937,7 @@ async function executarLoginIAM(btn, otpForçado = "") {
       if (telaSeguranca) telaSeguranca.style.display = "none";
       
       // EXCELENTE UX: O catálogo inicia aguardando o operador escolher qual das regionais dele ele quer auditar
-      alert(`Acesso homologado! Bem-vindo, ${resJson.usuario.nome}.\n\nSelecione uma das suas regionais autorizadas no topo para carregar o estoque.`);
+      alert(`Bem-vindo, ${resJson.usuario.nome}.\n\nSelecione uma das suas regionais autorizadas para carregar o estoque.`);
     } else {
       alert(`[FALHA DE AUTENTICAÇÃO] ${resJson.mensagem}`);
     }
