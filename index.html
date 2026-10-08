@@ -546,8 +546,9 @@
   // Extensão de Cache Local para as configurações do IAM
   AppState.iamConfigCache = null;
   let iamCarregandoAtivo = false; // Trava de concorrência local
+  
   /**
-   * 1. Controle de Alternância de Cards (Login / Registro)
+   * 1. Controle de Alternância de Cards (Login / Registro) com Higienização Automática de Dados
    */
   function alternarVisibilidadeIAM(tela) {
     const cardLogin = document.getElementById("iam-card-login");
@@ -561,8 +562,36 @@
     } else {
       cardLogin.style.display = "block";
       cardRegistro.style.display = "none";
+
+      // ==========================================================================
+      // 🧼 ENGINE DE HIGIENIZAÇÃO: RESET COMPLETO DOS CAMPOS DE CADASTRO
+      // ==========================================================================
+      console.log("[Aloca WEB IAM] Higienizando campos do formulário de registro...");
+      
+      // A. Limpa os campos de Texto Puro e Senhas
+      const camposTexto = ["regNome", "regEmail", "regSenha", "regSenhaRepetida"];
+      camposTexto.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.value = "";
+      });
+
+      // B. Reseta os Comboboxes para o estado neutro inicial
+      const selectVinculo = document.getElementById("regVinculo");
+      if (selectVinculo) selectVinculo.value = ""; // Volta para "Selecione..."
+
+      const selectEmpresa = document.getElementById("regEmpresa");
+      if (selectEmpresa) selectEmpresa.innerHTML = '<option value="" selected disabled>Aguardando nível de acesso...</option>';
+
+      const selectUf = document.getElementById("regUf");
+      if (selectUf) selectUf.value = ""; // Reseta para a primeira opção vazia
+
+      // C. Desmarca todos os Checkboxes do painel de Regionais / Stocks
+      document.querySelectorAll(".chk-iam-regional").forEach(chk => {
+        chk.checked = false;
+      });
     }
   }
+
 
   /**
    * 2. Busca as UFs, Regionais e Empresas da planilha mestre "AlocaWEB_Config"
