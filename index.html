@@ -684,7 +684,7 @@
 
 
   /**
-   * 4. Motor de Submissão de Cadastro com Validação de Token ADM para Perfil Geral
+   * 4. Motor de Submissão de Cadastro com Dupla Validação Prévio para Perfil Geral
    */
   async function executarCadastroIAM(btn) {
     const nome = document.getElementById("regNome").value.trim();
@@ -711,9 +711,16 @@
     let acessoNivel = "RESTRITO";
 
     // ==========================================================================
-    // 🔒 PORTARIA DE SEGURANÇA: DESAFIO DO CÓDIGO REGISTRO ADM PARA PERFIL GERAL
+    // 🔒 PORTARIA DE SEGURANÇA: VALIDAÇÃO DE DOMÍNIO E TOKEN ADM PARA PERFIL GERAL
     // ==========================================================================
     if (vinculo === "Geral") {
+      // Validação 1: O e-mail precisa conter obrigatoriamente o domínio institucional da Telefônica
+      if (!email.toLowerCase().includes("@telefonica")) {
+        alert("🚨 REQUISITO DE SEGURANÇA NEGADO\n\nO perfil 'Geral' é de uso exclusivo da Governança Telefônica.\n\nPor favor, insira um e-mail corporativo válido contendo o domínio @telefonica para prosseguir.");
+        return;
+      }
+
+      // Validação 2: Se o domínio estiver correto, desafia o usuário com o prompt do Token ADM
       const codigoDigitado = prompt("🔒 PERFIL ADMINISTRADOR DETECTADO\n\nPor razões de segurança, insira o 'Código Registro ADM' para liberar o acesso total ao sistema:");
       
       if (!codigoDigitado) {
@@ -794,6 +801,7 @@
       btn.innerHTML = "🚀 Finalizar e Enviar Registro";
     }
   }
+
 
 async function executarLoginIAM(btn, otpForçado = "") {
   const ufTrabalho = document.getElementById("loginUfSelector").value;
