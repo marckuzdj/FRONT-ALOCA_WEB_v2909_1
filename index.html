@@ -270,7 +270,7 @@
     <!-- Localize o loginUfSelector e substitua por esta linha limpa -->
     <div class="iam-form-group">
       <label>Selecionar UF de Trabalho</label>
-      <select id="loginUfSelector">
+      <select id="loginUfSelector" onchange="rastrearApiUfSelecionada()">
         <option value="">Carregando UFs operacionais...</option>
       </select>
     </div>
@@ -1586,6 +1586,33 @@ function lerArquivoCSV(input) {
 }
 
 
+  /**
+   * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor
+   */
+  function rastrearApiUfSelecionada() {
+    const ufTrabalho = document.getElementById("loginUfSelector").value;
+    
+    if (!ufTrabalho) {
+      console.log("[Aloca WEB IAM] Nenhuma UF selecionada no portão de entrada.");
+      return;
+    }
+
+    const urlFaturamentoAlvo = EndpointsUFs[ufTrabalho];
+
+    if (urlFaturamentoAlvo) {
+      // Exibe o log industrial estilizado com a cor roxa Nu-Style
+      console.log(
+        `%c[API GATEWAY CHAVEADO] %cFilial: %c${ufTrabalho} %c| Endpoint Acionado: %c${urlFaturamentoAlvo}`,
+        "color: #820ad1; font-weight: bold;",
+        "color: #111111; font-weight: bold;",
+        "color: #820ad1; font-weight: bold; background: #fcfaff; padding: 2px 4px; border: 1px solid #e4e7eb;",
+        "color: #6b7280;",
+        "color: #581c87; font-family: monospace; font-size: 0.8rem;"
+      );
+    } else {
+      console.error(`[Aloca WEB IAM] Alerta de Compliance: Nenhuma URL de Web App localizada para a UF: ${ufTrabalho}`);
+    }
+  }
 
   
 </script>
