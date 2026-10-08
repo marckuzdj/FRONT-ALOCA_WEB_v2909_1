@@ -1653,7 +1653,7 @@ function lerArquivoCSV(input) {
 
   /**
    * Monitor de Infraestrutura: Cospe no console a URL exata do Web App acionado pelo seletor de login
-   * Calibrado com Inteligência Reativa contra atrasos de carregamento assíncrono (Timeout Protection)
+   * Versão Linear Anti-Loop (Proteção total do motor JavaScript)
    */
   function rastrearApiUfSelecionada() {
     const ufTrabalho = document.getElementById("loginUfSelector").value;
@@ -1663,35 +1663,27 @@ function lerArquivoCSV(input) {
       return;
     }
 
-    // ==========================================================================
-    // 🛡️ REATIVIDADE ASSÍNCRONA: SE O CACHE AINDA NÃO CHEGOU DO GOOGLE, AGUARDA
-    // ==========================================================================
-    if (!AppState.iamConfigCache || !AppState.iamConfigCache.rotasRegionais) {
-      console.warn(`[Aloca WEB IAM] Aguardando sincronismo de tabelas mestre para a UF: ${ufTrabalho}...`);
-      // Faz um agendamento rápido de 350ms para tentar ler novamente quando o cache estiver pronto
-      setTimeout(rastrearApiUfSelecionada, 350);
-      return;
-    }
-
     let urlFaturamentoAlvo = "";
 
-    // RESOLUÇÃO RELACIONAL: Varre o dicionário de chaves dinâmicas
-    const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
-    for (let i = 0; i < chavesRegionais.length; i++) {
-      const regionalKey = chavesRegionais[i];
-      if (regionalKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
-        urlFaturamentoAlvo = AppState.iamConfigCache.rotasRegionais[regionalKey];
-        break; // Link localizado! Interrompe a varredura.
+    // 1. TENTA RESOLVER PELO CACHE DINÂMICO SE ELE JÁ EXISTIR
+    if (AppState.iamConfigCache && AppState.iamConfigCache.rotasRegionais) {
+      const chavesRegionais = Object.keys(AppState.iamConfigCache.rotasRegionais);
+      for (let i = 0; i < chavesRegionais.length; i++) {
+        const regionalKey = chavesRegionais[i];
+        if (regionalKey.toUpperCase().startsWith(ufTrabalho.toUpperCase())) {
+          urlFaturamentoAlvo = AppState.iamConfigCache.rotasRegionais[regionalKey];
+          break; 
+        }
       }
     }
 
-    // Fallback de contingência: Caso falte na planilha mestre, usa o array fixo do topo
+    // 2. FALLBACK SEGURO IMEDIATO: Se o cache falhou ou não chegou, usa a constante estática ou deduz
     if (!urlFaturamentoAlvo) {
       urlFaturamentoAlvo = EndpointsUFs[ufTrabalho] || "";
     }
 
+    // 3. EXECUÇÃO DO LOG OU AVISO SEM RECURSIVIDADE FANTASMA
     if (urlFaturamentoAlvo) {
-      // Exibe o log industrial estruturado com a identidade visual roxa Nu-Style
       console.log(
         `%c[API GATEWAY CHAVEADO] %cFilial: %c${ufTrabalho} %c| Endpoint Acionado: %c${urlFaturamentoAlvo}`,
         "color: #820ad1; font-weight: bold;",
@@ -1701,9 +1693,10 @@ function lerArquivoCSV(input) {
         "color: #581c87; font-family: monospace; font-size: 0.8rem;"
       );
     } else {
-      console.error(`[Aloca WEB IAM] Alerta de Compliance: Nenhuma URL de Web App localizada para a UF: ${ufTrabalho}`);
+      console.warn(`[Aloca WEB IAM] Tabelas mestre assíncronas ainda não indexadas para a UF: ${ufTrabalho}. O Gateway tentará a conexão direta no clique do Login.`);
     }
   }
+
 
 
 
