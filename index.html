@@ -708,12 +708,12 @@
     }
 
     // ==========================================================================
-    // 🔐 POLÍTICA DE SENHAS CORPORATIVAS (COMPLEXIDADE EXIGIDA)
+    // 🔐 POLÍTICA DE SENHAS CORPORATIVAS (COMPLEXIDADE EXPANDIDA COM UNDERLINE)
     // ==========================================================================
-    // RegEx explicada: (?=.*[A-Za-z]) tem letra, (?=.*\d) tem número, (?=.*[@$!%*#?&]) tem especial, {6,} mínimo 6 digitos
-    const regexComplexidadeSenha = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&.])[A-Za-z\d@$!%*#?&.]{6,}$/;
+    // RegEx Calibrada: Garante ao menos 1 letra, 1 número, 1 caractere especial (incluindo _ - . @) e no mínimo 6 dígitos
+    const regexComplexidadeSenha = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{6,}$/;
 
-    if (!regexComplexidadeSenha.test(senha)) {
+    if (!regexComplexSenha.test(senha)) {
       alert(
         "🚨 SENHA FORA DOS PADRÕES DE SEGURANÇA VIVO\n\n" +
         "A sua senha não atende aos requisitos mínimos de compliance.\n\n" +
@@ -721,7 +721,7 @@
         "• No mínimo 6 caracteres de comprimento\n" +
         "• Pelo menos uma letra\n" +
         "• Pelo menos um número\n" +
-        "• Pelo menos um caractere especial (Ex: @, #, $, %, &, *, !, .)"
+        "• Pelo menos um caractere especial (Ex: @, #, $, %, &, *, !, _, -, .)"
       );
       return; // Trava o envio e aborta a execução do cadastro
     }
